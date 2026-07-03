@@ -14,8 +14,9 @@ Windows 桌面工具：即時擷取系統播放的聲音（影片、線上會議
 - 翻譯：預設 Gemini Live API，模型 `gemini-3.5-live-translate-preview`
   （google-genai SDK）。模型名若失效，查
   https://ai.google.dev/gemini-api/docs/live-api/live-translate
-- 引擎可切換（右鍵選單 → 設定，或 settings.json 的 PROVIDER）；
-  OpenAI track 是空殼（translator_openai.py），選了會明確報錯。
+- 引擎可切換（右鍵選單 → 設定，或 settings.json 的 PROVIDER）：
+  Gemini（免費額度、16kHz）／ OpenAI gpt-realtime-translate
+  （WebSocket、24kHz、$0.034/min、輸出只有簡體 zh → OpenCC 客端繁化）。
 - 使用者設定存 settings.json（gitignored），覆蓋 config.py 預設值。
 - 不部署——本機執行 `python main.py`。
 
@@ -51,10 +52,13 @@ Windows 桌面工具：即時擷取系統播放的聲音（影片、線上會議
 - loopback 裝置取樣率依系統設定（44.1k/48kHz 立體聲），
   送 API 前必須轉 16kHz 單聲道 int16 PCM。
 - 翻譯引擎介面固定為「queue 進、text callback 出」——每個引擎
-  一個模組（translator.py＝Gemini、translator_openai.py＝OpenAI 空殼），
-  main.py 依 PROVIDER 載入。實作新引擎只需補完對應模組。
+  一個模組（translator.py＝Gemini、translator_openai.py＝OpenAI），
+  main.py 依 PROVIDER 載入，取樣率讀引擎的 SAMPLE_RATE class attr
+  （Gemini 16k、OpenAI 24k，送錯會變速變調）。
+- OpenAI 端點只收兩碼語言代碼（zh-Hant 會被拒，只有 zh＝簡體），
+  繁化靠 OpenCC s2twp；echo 過濾要繁簡雙向比對。
 
 ## 環境變數
 見 `.env.example`。`GEMINI_API_KEY`（Google AI Studio 免費取得）；
-`OPENAI_API_KEY` 只在選 OpenAI 引擎時需要（track 尚未實作）。
+`OPENAI_API_KEY` 只在選 OpenAI 引擎時需要（計時收費）。
 真 key 一律放 `.env`，不放 `.env.example`（會進 git）。

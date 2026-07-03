@@ -50,6 +50,8 @@ class Translator:
     on_status(str):      human-readable connection status for the UI
     """
 
+    SAMPLE_RATE = 16000  # PCM rate this engine expects from the capture
+
     def __init__(self, audio_queue: asyncio.Queue, on_text,
                  on_source_text=None, on_status=None):
         self._queue = audio_queue
@@ -126,7 +128,7 @@ class Translator:
             await session.send_realtime_input(
                 audio=types.Blob(
                     data=chunk,
-                    mime_type=f"audio/pcm;rate={config.TARGET_SAMPLE_RATE}",
+                    mime_type=f"audio/pcm;rate={self.SAMPLE_RATE}",
                 )
             )
 

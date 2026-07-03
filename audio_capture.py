@@ -46,13 +46,16 @@ def find_default_loopback(p: "pyaudio.PyAudio") -> dict:
 class AudioCapture:
     """Reads loopback audio on a background thread and emits PCM chunks.
 
-    Emitted chunks are 16 kHz mono int16 little-endian bytes,
+    Emitted chunks are mono int16 little-endian bytes at sample_rate
+    (each engine needs its own: Gemini 16 kHz, OpenAI 24 kHz),
     config.CHUNK_MS milliseconds each.
     """
 
-    def __init__(self, loop: asyncio.AbstractEventLoop, queue: asyncio.Queue):
+    def __init__(self, loop: asyncio.AbstractEventLoop, queue: asyncio.Queue,
+                 sample_rate: int = config.TARGET_SAMPLE_RATE):
         self._loop = loop
         self._queue = queue
+        self._rate = sample_rate
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self.device_name = ""
@@ -70,7 +73,18 @@ class AudioCapture:
         try:
             self._capture_loop()
         except Exception as exc:  # surface errors instead of dying silently
-            self._loop.call_soon_threadsafe(self._queue.put_nowait, exc)
+            self._push(exc)
+
+    def _push(self, item) -> None:
+        """Hand an item to the asyncio queue; stop if the loop is gone.
+
+        During a pipeline restart the loop closes while this thread may
+        still be mid-read — that's a normal shutdown, not an error.
+        """
+        try:
+            self._loop.call_soon_threadsafe(self._queue.put_nowait, item)
+        except RuntimeError:
+            self._stop.set()
 
     def _capture_loop(self) -> None:
         with pyaudio.PyAudio() as p:
@@ -89,21 +103,18 @@ class AudioCapture:
                 frames_per_buffer=native_frames,
             ) as stream:
                 out_bytes_per_chunk = int(
-                    config.TARGET_SAMPLE_RATE * config.CHUNK_MS / 1000
+                    self._rate * config.CHUNK_MS / 1000
                 ) * BYTES_PER_SAMPLE
                 pending = bytearray()
                 while not self._stop.is_set():
                     raw = stream.read(native_frames, exception_on_overflow=False)
                     pending.extend(
-                        convert_block(raw, channels, rate,
-                                      config.TARGET_SAMPLE_RATE)
+                        convert_block(raw, channels, rate, self._rate)
                     )
                     while len(pending) >= out_bytes_per_chunk:
                         chunk = bytes(pending[:out_bytes_per_chunk])
                         del pending[:out_bytes_per_chunk]
-                        self._loop.call_soon_threadsafe(
-                            self._queue.put_nowait, chunk
-                        )
+                        self._push(chunk)
 
 
 def convert_block(raw: bytes, channels: int, src_rate: int,

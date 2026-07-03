@@ -46,16 +46,17 @@ python main.py
 右鍵 →「設定…」可以調整，按「套用」立即生效並記住
 （存到 `settings.json`，刪掉即回復預設）：
 
-- **翻譯引擎**：Gemini（預設）／ OpenAI（**尚未實作**，選了會
-  明確報錯）。切換會自動重連，不用重開程式。
+- **翻譯引擎**：Gemini（預設，有免費額度）／ OpenAI
+  （gpt-realtime-translate，**計時收費約 $0.034/分鐘 ≈ $2/小時**，
+  需要 `.env` 有 `OPENAI_API_KEY`）。切換會自動重連，不用重開程式。
 - **字級**：10–32pt。
 - **顯示原文**：字幕上方多一行原語言辨識文字。
 - **透明度**：30%–100%。
 
 其他進階預設值（目標語言、行數、視窗寬度等）在 `config.py`。
-未來實作 OpenAI 引擎只需補完 `translator_openai.py`
-（介面已定好：queue 進、text callback 出），key 用 `.env` 的
-`OPENAI_API_KEY`。
+
+OpenAI 引擎的輸出語言只支援泛用 `zh`（簡體），程式會用 OpenCC
+自動轉成繁體（台灣用語），字幕觀感與 Gemini 引擎一致。
 
 ## 常見問題
 
@@ -82,7 +83,7 @@ python main.py
 ```
 audio_capture.py      WASAPI loopback → 16kHz 單聲道 PCM chunk（asyncio.Queue）
 translator.py         Gemini Live session：送音訊、收譯文 delta（queue 進、callback 出）
-translator_openai.py  OpenAI 引擎佔位（尚未實作，介面同上）
+translator_openai.py  OpenAI gpt-realtime-translate 引擎（介面同上，24kHz）
 subtitle_ui.py        tkinter 懸浮字幕視窗（置頂、可拖曳）
 settings_ui.py        設定面板（引擎、字級、原文、透明度）
 main.py               組裝：UI 主執行緒 + 可重啟的背景 pipeline（Backend）

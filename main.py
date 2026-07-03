@@ -87,12 +87,14 @@ class Backend:
     async def _pipeline(self) -> None:
         self._loop = asyncio.get_running_loop()
         self._task = asyncio.current_task()
+        translator_cls = _translator_class()
         queue: asyncio.Queue = asyncio.Queue()
-        capture = AudioCapture(self._loop, queue)
+        capture = AudioCapture(self._loop, queue,
+                               sample_rate=translator_cls.SAMPLE_RATE)
         capture.start()
         self._window.push_status("listening...")
 
-        translator = _translator_class()(
+        translator = translator_cls(
             queue,
             on_text=self._window.push_text,
             on_source_text=self._window.push_source_text,

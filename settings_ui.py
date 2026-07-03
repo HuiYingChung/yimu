@@ -35,7 +35,7 @@ class SettingsDialog:
             frame, text="Gemini", value="gemini", variable=self._provider,
         ).grid(row=1, column=0, columnspan=2, sticky="w")
         ttk.Radiobutton(
-            frame, text="OpenAI（尚未實作）", value="openai",
+            frame, text="OpenAI（付費，約 $2/小時）", value="openai",
             variable=self._provider,
         ).grid(row=2, column=0, columnspan=2, sticky="w")
 

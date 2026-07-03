@@ -14,6 +14,7 @@ import sys
 # track is a placeholder, not implemented
 PROVIDER = "gemini"
 MODEL_NAME = "gemini-3.5-live-translate-preview"
+OPENAI_MODEL_NAME = "gpt-realtime-translate"
 TARGET_LANGUAGE_CODE = "zh-Hant"
 # Stay silent when the source audio is already in the target language.
 ECHO_TARGET_LANGUAGE = False
