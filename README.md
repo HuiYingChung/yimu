@@ -38,19 +38,24 @@ python main.py
 - 字幕視窗出現在螢幕下方置中，永遠置頂、半透明黑底白字。
 - 播放任何英文（或其他語言）的聲音，2～3 秒內出現中文字幕。
 - **拖曳**：按住視窗任意處移動。
+- **設定**：右鍵選單選「設定…」。
 - **退出**：按 `Esc`，或右鍵選單選「結束」。
 
-設定（目標語言、是否顯示原文、字型大小、視窗樣式）都在
-`config.py`，改完重啟即生效。
+## 設定面板
 
-## 切換翻譯引擎
+右鍵 →「設定…」可以調整，按「套用」立即生效並記住
+（存到 `settings.json`，刪掉即回復預設）：
 
-`config.py` 的 `PROVIDER` 決定用哪個引擎，改完重啟生效：
+- **翻譯引擎**：Gemini（預設）／ OpenAI（**尚未實作**，選了會
+  明確報錯）。切換會自動重連，不用重開程式。
+- **字級**：10–32pt。
+- **顯示原文**：字幕上方多一行原語言辨識文字。
+- **透明度**：30%–100%。
 
-- `"gemini"`（預設）：Gemini Live API，需要 `.env` 有 `GEMINI_API_KEY`。
-- `"openai"`：**尚未實作**，選了會明確報錯。未來實作只需補完
-  `translator_openai.py`（介面已定好：queue 進、text callback 出），
-  key 用 `.env` 的 `OPENAI_API_KEY`。
+其他進階預設值（目標語言、行數、視窗寬度等）在 `config.py`。
+未來實作 OpenAI 引擎只需補完 `translator_openai.py`
+（介面已定好：queue 進、text callback 出），key 用 `.env` 的
+`OPENAI_API_KEY`。
 
 ## 常見問題
 
@@ -79,8 +84,9 @@ audio_capture.py      WASAPI loopback → 16kHz 單聲道 PCM chunk（asyncio.Qu
 translator.py         Gemini Live session：送音訊、收譯文 delta（queue 進、callback 出）
 translator_openai.py  OpenAI 引擎佔位（尚未實作，介面同上）
 subtitle_ui.py        tkinter 懸浮字幕視窗（置頂、可拖曳）
-main.py               組裝：UI 主執行緒 + 背景 asyncio pipeline，依 PROVIDER 選引擎
-config.py             所有可調設定
+settings_ui.py        設定面板（引擎、字級、原文、透明度）
+main.py               組裝：UI 主執行緒 + 可重啟的背景 pipeline（Backend）
+config.py             預設值 + settings.json 載入/儲存
 ```
 
 ---

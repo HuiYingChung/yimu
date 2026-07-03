@@ -22,6 +22,5 @@ class Translator:
 
     async def run(self) -> None:
         raise FatalTranslatorError(
-            "OpenAI 翻譯引擎尚未實作。請把 config.py 的 PROVIDER "
-            "改回 \"gemini\"。"
+            "OpenAI 翻譯引擎尚未實作。請在右鍵選單的「設定…」切回 Gemini。"
         )

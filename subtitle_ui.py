@@ -24,7 +24,7 @@ class SubtitleWindow:
     right-click menu to quit.
     """
 
-    def __init__(self, root: tk.Tk, on_close=None):
+    def __init__(self, root: tk.Tk, on_close=None, on_open_settings=None):
         self._root = root
         self._on_close = on_close
         self._text_queue: queue.Queue = queue.Queue()
@@ -47,15 +47,14 @@ class SubtitleWindow:
         )
         self._status_label.pack(fill="x", padx=12, pady=(4, 0))
 
-        self._source_label = None
+        self._source_current = ""
+        self._source_label = tk.Label(
+            root, text="", font=(config.FONT_FAMILY, config.FONT_SIZE - 6),
+            fg="#bbbbbb", bg="black", justify="left", anchor="w",
+            wraplength=self._width - 24,
+        )
         if config.SHOW_SOURCE_TEXT:
-            self._source_label = tk.Label(
-                root, text="", font=(config.FONT_FAMILY, config.FONT_SIZE - 8),
-                fg="#bbbbbb", bg="black", justify="left", anchor="w",
-                wraplength=self._width - 24,
-            )
             self._source_label.pack(fill="x", padx=12)
-            self._source_current = ""
 
         self._label = tk.Label(
             root, text="等待聲音…", font=(config.FONT_FAMILY, config.FONT_SIZE),
@@ -71,6 +70,8 @@ class SubtitleWindow:
         root.bind("<Configure>", lambda e: self._reposition())
 
         self._menu = tk.Menu(root, tearoff=0)
+        if on_open_settings is not None:
+            self._menu.add_command(label="設定…", command=on_open_settings)
         self._menu.add_command(label="結束", command=self.close)
 
         self._moved_by_user = False
@@ -108,7 +109,7 @@ class SubtitleWindow:
             changed = True
             if kind == "text":
                 self._append_delta(payload)
-            elif kind == "source" and self._source_label is not None:
+            elif kind == "source" and config.SHOW_SOURCE_TEXT:
                 self._source_current = (
                     self._source_current + payload
                 )[-120:]
@@ -136,9 +137,22 @@ class SubtitleWindow:
         if self._current.strip():
             self._lines.append(self._current.strip())
         self._current = ""
-        if self._source_label is not None:
-            self._source_current = ""
-            self._source_label.config(text="")
+        self._source_current = ""
+        self._source_label.config(text="")
+
+    def apply_settings(self) -> None:
+        """Re-apply user-adjustable config values to the live window."""
+        self._root.attributes("-alpha", config.WINDOW_ALPHA)
+        self._label.config(font=(config.FONT_FAMILY, config.FONT_SIZE))
+        self._source_label.config(
+            font=(config.FONT_FAMILY, config.FONT_SIZE - 6))
+        if config.SHOW_SOURCE_TEXT:
+            if not self._source_label.winfo_ismapped():
+                self._source_label.pack(fill="x", padx=12,
+                                        before=self._label)
+        else:
+            self._source_label.pack_forget()
+        self._render()  # height may have changed; _render repositions
 
     def _render(self) -> None:
         shown = list(self._lines)

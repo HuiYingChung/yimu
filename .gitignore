@@ -16,3 +16,6 @@ venv/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# User settings written by the in-app settings panel
+settings.json
