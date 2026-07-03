@@ -40,7 +40,7 @@ def _fail_startup(message: str) -> None:
     print(f"error: {message}", file=sys.stderr)
     root = tk.Tk()
     root.withdraw()
-    messagebox.showerror("Realtime Subtitle Translator", message)
+    messagebox.showerror("譯幕 Yimu", message)
     sys.exit(1)
 
 
@@ -123,6 +123,12 @@ def main() -> None:
         )
 
     root = tk.Tk()
+    icon = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "assets", "icon.ico")
+    try:
+        root.iconbitmap(default=icon)
+    except tk.TclError:
+        pass  # icon missing/corrupt — cosmetic, keep running
 
     def open_settings() -> None:
         from settings_ui import SettingsDialog

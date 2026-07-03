@@ -17,7 +17,7 @@ class SettingsDialog:
         self._backend = backend
 
         top = self._top = tk.Toplevel(root)
-        top.title("設定")
+        top.title("譯幕 設定")
         top.attributes("-topmost", True)
         top.resizable(False, False)
 
