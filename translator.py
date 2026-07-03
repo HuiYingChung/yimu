@@ -1,8 +1,9 @@
-"""Gemini Live translation session.
+"""Gemini Live translation session (the default engine).
 
 Interface: PCM chunks in via asyncio.Queue, translated text out via
-callback. Keep this contract stable — swapping the translation provider
-should only require rewriting this file.
+callback. Keep this contract stable — every engine implements it in
+its own module (see translator_openai.py) and main.py picks one via
+config.PROVIDER.
 
 Run standalone to test:  python translator.py
 (plays nothing itself — start an English video, Chinese deltas print

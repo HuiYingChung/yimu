@@ -1,8 +1,8 @@
 """Floating always-on-top subtitle window (tkinter).
 
 tkinter runs on the main thread; translation deltas arrive from any
-thread via thread-safe push_text()/push_status(), polled with
-root.after(). Run standalone for a visual demo:  python subtitle_ui.py
+thread via the thread-safe push_* methods, polled with root.after().
+Run standalone for a visual demo:  python subtitle_ui.py
 """
 
 import queue
@@ -20,8 +20,8 @@ class SubtitleWindow:
 
     Deltas accumulate into the current line; the line is committed when
     it ends with a sentence-ending character or after a pause of
-    config.SENTENCE_PAUSE_S without new text. Drag to move, Esc or
-    right-click menu to quit.
+    config.SENTENCE_PAUSE_S without new text. Drag to move; the
+    right-click menu opens settings (when wired) and quits; Esc quits.
     """
 
     def __init__(self, root: tk.Tk, on_close=None, on_open_settings=None):

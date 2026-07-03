@@ -11,9 +11,12 @@ Windows 桌面工具：即時擷取系統播放的聲音（影片、線上會議
 ## 技術棧與部署
 - Python 3.11＋，無框架；tkinter（標準庫）做 UI。
 - 音訊：pyaudiowpatch（WASAPI loopback，僅 Windows）。
-- 翻譯：Gemini Live API，模型 `gemini-3.5-live-translate-preview`
+- 翻譯：預設 Gemini Live API，模型 `gemini-3.5-live-translate-preview`
   （google-genai SDK）。模型名若失效，查
   https://ai.google.dev/gemini-api/docs/live-api/live-translate
+- 引擎可切換（右鍵選單 → 設定，或 settings.json 的 PROVIDER）；
+  OpenAI track 是空殼（translator_openai.py），選了會明確報錯。
+- 使用者設定存 settings.json（gitignored），覆蓋 config.py 預設值。
 - 不部署——本機執行 `python main.py`。
 
 ## 適用的共用標準
@@ -28,6 +31,8 @@ Windows 桌面工具：即時擷取系統播放的聲音（影片、線上會議
   `python translator.py`（terminal 印譯文）。
 - 端到端：播英文 YouTube 3 分鐘，字幕延遲 < 3 秒、不崩潰；
   播中文內容字幕保持安靜（echo_target_language=False）。
+- 設定面板：套用後即時生效、settings.json 內容正確、
+  切換引擎會重連（切到 OpenAI 空殼要看到明確錯誤）。
 - 音訊與 UI 的驗收需 Huiying 在真機確認，不能只看 code。
 
 ## 已知的坑與注意事項
@@ -39,12 +44,17 @@ Windows 桌面工具：即時擷取系統播放的聲音（影片、線上會議
   `_is_echo()` client 端過濾，不要移除。
 - tkinter `<Configure>` handler 內不可無條件呼叫 `geometry()`——
   會觸發無限事件迴圈，視窗卡死（見 subtitle_ui.py `_reposition()`）。
+- tkinter 明確設過 `geometry()` 後視窗不再隨內容自動長高——
+  每次更新字幕後要用 reqheight 重設（見 subtitle_ui.py `_render()`）。
 - Live API session 有時長上限；斷線要自動重連（backoff、
   保留既有字幕），429 額度用盡要浮到 UI。
 - loopback 裝置取樣率依系統設定（44.1k/48kHz 立體聲），
   送 API 前必須轉 16kHz 單聲道 int16 PCM。
-- translator.py 介面固定為「queue 進、text callback 出」——
-  未來換 OpenAI GPT-Realtime-Translate 只重寫此檔。
+- 翻譯引擎介面固定為「queue 進、text callback 出」——每個引擎
+  一個模組（translator.py＝Gemini、translator_openai.py＝OpenAI 空殼），
+  main.py 依 PROVIDER 載入。實作新引擎只需補完對應模組。
 
 ## 環境變數
-見 `.env.example`。只有 `GEMINI_API_KEY`（Google AI Studio 免費取得）。
+見 `.env.example`。`GEMINI_API_KEY`（Google AI Studio 免費取得）；
+`OPENAI_API_KEY` 只在選 OpenAI 引擎時需要（track 尚未實作）。
+真 key 一律放 `.env`，不放 `.env.example`（會進 git）。

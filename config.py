@@ -10,7 +10,8 @@ import os
 import sys
 
 # --- Translation ---
-# "gemini" or "openai" — the OpenAI track is a placeholder, not implemented
+# "gemini" or "openai" — switchable in the settings panel; the OpenAI
+# track is a placeholder, not implemented
 PROVIDER = "gemini"
 MODEL_NAME = "gemini-3.5-live-translate-preview"
 TARGET_LANGUAGE_CODE = "zh-Hant"
