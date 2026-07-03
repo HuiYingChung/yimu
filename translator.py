@@ -10,6 +10,7 @@ to the terminal)
 """
 
 import asyncio
+import re
 import sys
 import traceback
 
@@ -31,6 +32,15 @@ class FatalTranslatorError(RuntimeError):
     """Unrecoverable error (bad API key, no permission)."""
 
 
+# Keep only letters, digits and CJK so half/full-width punctuation and
+# spacing differences don't break echo comparison.
+_NORM_RE = re.compile(r"[^0-9a-z一-鿿]+")
+
+
+def _normalize(text: str) -> str:
+    return _NORM_RE.sub("", text.lower())
+
+
 class Translator:
     """Streams audio chunks to Gemini Live, emits translation deltas.
 
@@ -46,6 +56,7 @@ class Translator:
         self._on_source_text = on_source_text
         self._on_status = on_status or (lambda msg: None)
         self._got_message = False
+        self._recent_input = ""
 
     async def run(self) -> None:
         """Session loop: connect, stream, reconnect with backoff on drop."""
@@ -124,15 +135,29 @@ class Translator:
             content = response.server_content
             if content is None:
                 continue
-            out = content.output_transcription
-            if out is not None and out.text:
-                self._on_text(out.text)
             src = content.input_transcription
-            if src is not None and src.text and self._on_source_text:
-                self._on_source_text(src.text)
+            if src is not None and src.text:
+                self._recent_input = (self._recent_input
+                                      + _normalize(src.text))[-300:]
+                if self._on_source_text:
+                    self._on_source_text(src.text)
+            out = content.output_transcription
+            if out is not None and out.text and not self._is_echo(out.text):
+                self._on_text(out.text)
             # content.model_turn audio parts are intentionally discarded
         # receive() ending means the server closed the session
         raise ConnectionError("Live session closed by server")
+
+    def _is_echo(self, delta: str) -> bool:
+        """True when the output delta just repeats the source speech.
+
+        With echo_target_language=False the model stays silent in AUDIO
+        for target-language input, but output_transcription still streams
+        the input verbatim (verified 2026-07 against the live API) — so
+        subtitles must drop deltas already present in the recent input.
+        """
+        norm = _normalize(delta)
+        return bool(norm) and norm in self._recent_input
 
 
 async def _standalone() -> None:

@@ -31,7 +31,14 @@ Windows 桌面工具：即時擷取系統播放的聲音（影片、線上會議
 - 音訊與 UI 的驗收需 Huiying 在真機確認，不能只看 code。
 
 ## 已知的坑與注意事項
-- pyaudiowpatch 只能在 Windows 跑。
+- pyaudiowpatch 只能在 Windows 跑。且 **WASAPI loopback 在完全靜音時
+  不會送出任何 frame**——`stream.read()` 會一直卡住，這是正常特性，
+  測試時必須確保有聲音在播。
+- **`echo_target_language=False` 只讓音訊安靜**；`output_transcription`
+  照樣逐字回顯中文輸入（2026-07 實測）。字幕安靜靠 translator.py 的
+  `_is_echo()` client 端過濾，不要移除。
+- tkinter `<Configure>` handler 內不可無條件呼叫 `geometry()`——
+  會觸發無限事件迴圈，視窗卡死（見 subtitle_ui.py `_reposition()`）。
 - Live API session 有時長上限；斷線要自動重連（backoff、
   保留既有字幕），429 額度用盡要浮到 UI。
 - loopback 裝置取樣率依系統設定（44.1k/48kHz 立體聲），
