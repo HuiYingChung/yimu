@@ -43,6 +43,15 @@ python main.py
 設定（目標語言、是否顯示原文、字型大小、視窗樣式）都在
 `config.py`，改完重啟即生效。
 
+## 切換翻譯引擎
+
+`config.py` 的 `PROVIDER` 決定用哪個引擎，改完重啟生效：
+
+- `"gemini"`（預設）：Gemini Live API，需要 `.env` 有 `GEMINI_API_KEY`。
+- `"openai"`：**尚未實作**，選了會明確報錯。未來實作只需補完
+  `translator_openai.py`（介面已定好：queue 進、text callback 出），
+  key 用 `.env` 的 `OPENAI_API_KEY`。
+
 ## 常見問題
 
 **字幕一直沒出現？**
@@ -66,15 +75,13 @@ python main.py
 ## 架構
 
 ```
-audio_capture.py   WASAPI loopback → 16kHz 單聲道 PCM chunk（asyncio.Queue）
-translator.py      Gemini Live session：送音訊、收譯文 delta（queue 進、callback 出）
-subtitle_ui.py     tkinter 懸浮字幕視窗（置頂、可拖曳）
-main.py            組裝：UI 主執行緒 + 背景 asyncio pipeline
-config.py          所有可調設定
+audio_capture.py      WASAPI loopback → 16kHz 單聲道 PCM chunk（asyncio.Queue）
+translator.py         Gemini Live session：送音訊、收譯文 delta（queue 進、callback 出）
+translator_openai.py  OpenAI 引擎佔位（尚未實作，介面同上）
+subtitle_ui.py        tkinter 懸浮字幕視窗（置頂、可拖曳）
+main.py               組裝：UI 主執行緒 + 背景 asyncio pipeline，依 PROVIDER 選引擎
+config.py             所有可調設定
 ```
-
-未來若換翻譯引擎（如 OpenAI GPT-Realtime-Translate），
-只需重寫 `translator.py`，介面（queue 進、text callback 出）不變。
 
 ---
 

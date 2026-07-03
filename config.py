@@ -1,6 +1,8 @@
 """Central configuration for the realtime subtitle translator."""
 
 # --- Translation ---
+# "gemini" or "openai" — the OpenAI track is a placeholder, not implemented
+PROVIDER = "gemini"
 MODEL_NAME = "gemini-3.5-live-translate-preview"
 TARGET_LANGUAGE_CODE = "zh-Hant"
 # Stay silent when the source audio is already in the target language.
@@ -21,7 +23,7 @@ WINDOW_WIDTH_RATIO = 0.7    # fraction of screen width
 WINDOW_BOTTOM_MARGIN = 80   # px from bottom of screen
 WINDOW_ALPHA = 0.85
 FONT_FAMILY = "Microsoft JhengHei UI"
-FONT_SIZE = 22
-MAX_LINES = 2               # subtitle lines kept on screen
+FONT_SIZE = 18
+MAX_LINES = 3               # subtitle lines kept on screen
 SENTENCE_PAUSE_S = 2.0      # break line after this long without new text
 SENTENCE_ENDINGS = "。？！?!"

@@ -146,6 +146,9 @@ class SubtitleWindow:
             shown.append(self._current)
         shown = shown[-config.MAX_LINES:]
         self._label.config(text="\n".join(shown) or " ")
+        # explicit geometry() disables auto-sizing, so grow/shrink manually
+        self._root.update_idletasks()
+        self._reposition()
 
     def _reposition(self) -> None:
         """Keep the window bottom-centered as its height changes.
@@ -153,11 +156,14 @@ class SubtitleWindow:
         Called from the <Configure> handler, so it must not set the same
         geometry twice — that would re-fire <Configure> in an endless loop.
         """
-        if self._moved_by_user:
-            return
         h = self._root.winfo_reqheight()
-        x = (self._root.winfo_screenwidth() - self._width) // 2
-        y = self._root.winfo_screenheight() - config.WINDOW_BOTTOM_MARGIN - h
+        if self._moved_by_user:
+            # keep the user's position, only track the content height
+            x, y = self._root.winfo_x(), self._root.winfo_y()
+        else:
+            x = (self._root.winfo_screenwidth() - self._width) // 2
+            y = (self._root.winfo_screenheight()
+                 - config.WINDOW_BOTTOM_MARGIN - h)
         geometry = f"{self._width}x{h}+{x}+{y}"
         if geometry != self._last_geometry:
             self._last_geometry = geometry
