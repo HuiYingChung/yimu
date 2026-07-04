@@ -57,6 +57,10 @@
   （Gemini 16k、OpenAI 24k，送錯會變速變調）。
 - OpenAI 端點只收兩碼語言代碼（zh-Hant 會被拒，只有 zh＝簡體），
   繁化靠 OpenCC s2twp；echo 過濾要繁簡雙向比對。
+- OpenAI 的輸入轉錄**預設關閉**：session.update 必須設
+  `audio.input.transcription`（model: gpt-realtime-whisper）才會收到
+  `session.input_transcript.delta`——原文字幕與 `_is_echo()` 都靠它，
+  少了這段設定兩者會一起靜默失效（2026-07 踩過）。
 - OpenAI 靠「聽到結尾靜音」才 finalize 最後一句，而 loopback 停播
   時不送 frame——兩者相撞會讓最後一句永遠卡住。解法：sender 斷流
   後補送 3 秒靜音尾巴（見 translator_openai.py，計費考量有上限）。
