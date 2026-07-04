@@ -11,6 +11,7 @@ venv/
 
 # Test artifacts
 *.wav
+*.log
 
 # OS
 Thumbs.db
