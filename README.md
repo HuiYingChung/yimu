@@ -1,106 +1,131 @@
-# 譯幕 Yimu — 即時語音翻譯字幕工具
+# Yimu 譯幕 — Live Translated Subtitles for Your Desktop
 
-> **Yimu** turns anything your Windows machine plays — videos, meetings,
-> livestreams — into live Traditional Chinese subtitles in a floating
-> window. Speech-native translation (Gemini Live / OpenAI Realtime),
-> no caption track needed, localized for Taiwan. Docs below are in
-> Traditional Chinese; the [case study](https://www.huiyingchung.com/yimu-case-study.html)
-> tells the full story in English.
+> 繁體中文文件：[README.zh-TW.md](README.zh-TW.md)
 
-即時擷取電腦正在播放的聲音（YouTube、線上會議、任何英文或外語內容），
-透過 Gemini 或 OpenAI 的即時翻譯 API 翻成**繁體中文**，
-以懸浮字幕視窗顯示在螢幕下方。
+**Yimu** captures whatever your Windows machine is playing — YouTube,
+online meetings, livestreams, podcasts — and shows live **Traditional
+Chinese** subtitles in a floating window. Translation is speech-native
+(the audio stream goes straight into a translation model), so no
+caption track is needed and no platform is off-limits.
 
-- 單人本機使用，僅支援 **Windows**（音訊擷取用 WASAPI loopback）
-- 只顯示文字字幕，不播放翻譯語音
-- 來源是中文時字幕保持安靜（不會鸚鵡學舌）
+- Dual engines, switchable in-app: **Gemini Live** (free tier) or
+  **OpenAI gpt-realtime-translate** (metered)
+- Localized for Taiwan: OpenAI's Simplified-only output is converted
+  client-side with OpenCC (Taiwan phrasing — 人工智慧, not 人工智能)
+- Single-user, local-first: no server, no account, keys stay in a
+  local `.env`
+- Windows only (audio capture uses WASAPI loopback)
+- Subtitles only — the translated audio is discarded, and the window
+  stays quiet when the source is already Chinese
 
-## 安裝
+The full design story is in the
+[case study](https://www.huiyingchung.com/yimu-case-study.html).
 
-需要 Python 3.11 以上。
+## Install
+
+Requires Python 3.11+.
 
 ```
 pip install -r requirements.txt
 ```
 
-## 取得免費 API key
+## API keys
 
-1. 開 [Google AI Studio](https://aistudio.google.com/apikey)，用 Google 帳號登入。
-2. 按「Create API key」，複製產生的 key。
-3. 在專案資料夾把 `.env.example` 複製一份改名為 `.env`，
-   把 key 貼進去：
+Copy `.env.example` to `.env`, then fill in the key(s) for the
+engine(s) you plan to use:
 
-```
-GEMINI_API_KEY=你的key
-```
+**Gemini (default engine, free tier)**
+1. Open [Google AI Studio](https://aistudio.google.com/apikey) and
+   sign in with a Google account.
+2. Click "Create API key" and paste it into `.env`:
+   `GEMINI_API_KEY=...`
 
-免費額度有速率限制，個人看影片、開會使用一般夠用；
-超限時字幕視窗會顯示 429 並自動退避重試。
+The free tier is rate-limited but generally enough for personal use;
+when the limit hits, the subtitle window shows a 429 status and
+retries with backoff.
 
-## 使用
+**OpenAI (optional second engine, metered)**
+1. Create a key at [platform.openai.com](https://platform.openai.com/api-keys)
+   (requires a funded API account).
+2. Paste it into `.env`: `OPENAI_API_KEY=...`
+
+Billing is by audio duration — roughly **$0.034/minute (~$2/hour)**.
+The settings panel repeats this price next to the engine switch, on
+purpose.
+
+## Run
 
 ```
 python main.py
 ```
 
-或直接雙擊 `start_translator.bat`（無黑窗；桌面的
-「即時字幕翻譯」捷徑指向它）。
+Or double-click `start_translator.bat` (no console window; the
+desktop shortcut "譯幕 Yimu" points to it).
 
-- 字幕視窗出現在螢幕下方置中，永遠置頂、半透明黑底白字。
-- 播放任何英文（或其他語言）的聲音，2～3 秒內出現中文字幕。
-- **拖曳**：按住視窗任意處移動。
-- **設定**：右鍵選單選「設定…」。
-- **退出**：按 `Esc`，或右鍵選單選「結束」。
+- The subtitle window appears bottom-center: always on top,
+  semi-transparent, black bar with white text.
+- Play anything in English (or most other languages) — Chinese
+  subtitles appear within 2–3 seconds.
+- **Drag** anywhere on the window to move it.
+- **Settings**: right-click → 設定….
+- **Quit**: press `Esc`, or right-click → 結束.
 
-## 設定面板
+## Settings panel
 
-右鍵 →「設定…」可以調整，按「套用」立即生效並記住
-（存到 `settings.json`，刪掉即回復預設）：
+Right-click → 設定…. Apply takes effect immediately and persists to
+`settings.json` (delete the file to reset):
 
-- **翻譯引擎**：Gemini（預設，有免費額度）／ OpenAI
-  （gpt-realtime-translate，**計時收費約 $0.034/分鐘 ≈ $2/小時**，
-  需要 `.env` 有 `OPENAI_API_KEY`）。切換會自動重連，不用重開程式。
-- **字級**：10–32pt。
-- **顯示行數**：1–10 行（視窗高度自動跟著調整）。
-- **顯示原文**：字幕上方多一行原語言辨識文字。
-- **透明度**：30%–100%。
+- **Engine** — Gemini (default, free) / OpenAI (metered; needs
+  `OPENAI_API_KEY`). Switching reconnects in place, no restart.
+- **Font size** — 10–32 pt.
+- **Lines shown** — 1–10; the window height follows automatically.
+- **Show source text** — an extra line of source-language
+  transcription above the translation.
+- **Opacity** — 30–100%.
 
-其他進階預設值（目標語言、視窗寬度等）在 `config.py`。
+Advanced defaults (target language, window width, etc.) live in
+`config.py`.
 
-OpenAI 引擎的輸出語言只支援泛用 `zh`（簡體），程式會用 OpenCC
-自動轉成繁體（台灣用語），字幕觀感與 Gemini 引擎一致。
+## FAQ
 
-## 常見問題
+**No subtitles appearing?**
+- Check that audio is playing through the **default output device** —
+  the tool only captures the default speakers/headphones. Restart the
+  app after switching devices.
+- Check the console/status line for errors (an invalid key or a
+  missing loopback device is reported in plain language).
 
-**字幕一直沒出現？**
-- 檢查聲音是否從「預設輸出裝置」播放——工具只錄預設喇叭/耳機。
-  換過輸出裝置後要重啟工具。
-- 看 console 有沒有錯誤訊息（API key 無效、找不到 loopback 裝置
-  都會直接顯示）。
+**429 / rate limited?**
+The free quota is exhausted; the tool backs off and reconnects
+automatically. Wait a bit, or check your quota in AI Studio.
 
-**顯示 429 / rate limited？**
-免費額度用盡，工具會自動退避重連；等一下，或到 AI Studio 檢查配額。
+**No subtitles on Chinese content?**
+Expected: the translator stays silent when the source is already
+Chinese (`ECHO_TARGET_LANGUAGE = False` in `config.py`).
 
-**播中文影片沒有字幕？**
-預期行為：來源已是中文時翻譯模型保持安靜
-（`config.py` 的 `ECHO_TARGET_LANGUAGE = False`）。
+**Model name stopped working?**
+Both models are current as of mid-2026 and may be renamed. Check the
+[Gemini live-translation docs](https://ai.google.dev/gemini-api/docs/live-api/live-translate)
+or OpenAI's realtime translation docs, then update `MODEL_NAME` /
+`OPENAI_MODEL_NAME` in `config.py`.
 
-**模型名稱失效（連線一直失敗）？**
-`gemini-3.5-live-translate-preview` 是 preview 模型，名稱可能更換。
-查 [Live Translation 文件](https://ai.google.dev/gemini-api/docs/live-api/live-translate)
-的最新模型名，改 `config.py` 的 `MODEL_NAME`。
-
-## 架構
+## Architecture
 
 ```
-audio_capture.py      WASAPI loopback → 16kHz 單聲道 PCM chunk（asyncio.Queue）
-translator.py         Gemini Live session：送音訊、收譯文 delta（queue 進、callback 出）
-translator_openai.py  OpenAI gpt-realtime-translate 引擎（介面同上，24kHz）
-subtitle_ui.py        tkinter 懸浮字幕視窗（置頂、可拖曳）
-settings_ui.py        設定面板（引擎、字級、原文、透明度）
-main.py               組裝：UI 主執行緒 + 可重啟的背景 pipeline（Backend）
-config.py             預設值 + settings.json 載入/儲存
+audio_capture.py      WASAPI loopback → mono PCM chunks at the engine's
+                      rate (16 kHz Gemini / 24 kHz OpenAI) → asyncio.Queue
+translator.py         Gemini Live session — audio queue in, text deltas out
+translator_openai.py  OpenAI gpt-realtime-translate over WebSocket
+                      (same contract; OpenCC Traditional-Chinese layer,
+                      echo filter, capped silence tail)
+subtitle_ui.py        tkinter floating subtitle window (topmost, draggable)
+settings_ui.py        settings panel (engine, font, lines, source, opacity)
+main.py               tkinter main thread + restartable asyncio Backend
+config.py             defaults + settings.json load/save
 ```
+
+Each engine is one module behind one contract — audio queue in, text
+callback out. Adding an engine means adding a module.
 
 ---
 
