@@ -20,7 +20,7 @@ import websockets
 from opencc import OpenCC
 
 import config
-from translator import FatalTranslatorError, _normalize
+from translator import FatalTranslatorError, _CJK_RE, _leaf_errors, _normalize
 
 # The endpoint only outputs generic 'zh' (Simplified); convert client-side
 # to Traditional with Taiwan phrasing so subtitles match the Gemini engine.
@@ -81,7 +81,11 @@ class Translator:
                 raise
             except Exception as exc:
                 traceback.print_exc(file=sys.stderr)
-                message = str(exc)
+                leaves = _leaf_errors(exc)
+                for leaf in leaves:
+                    if isinstance(leaf, FatalTranslatorError):
+                        raise leaf
+                message = " | ".join(str(leaf) for leaf in leaves)
                 if any(marker in message for marker in _FATAL_MARKERS):
                     raise FatalTranslatorError(
                         "OpenAI 拒絕了這把 key。檢查 .env 的 OPENAI_API_KEY "
@@ -175,6 +179,8 @@ class Translator:
         scripts because the echo may come back Simplified while the
         source transcript is Traditional (or vice versa).
         """
+        if not _CJK_RE.search(delta):
+            return False  # pure-ASCII deltas can't be echoes of zh input
         norm = _normalize(delta)
         if not norm:
             return False

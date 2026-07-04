@@ -49,6 +49,7 @@ _USER_SETTINGS = {
     "FONT_SIZE": lambda v: isinstance(v, int) and 10 <= v <= 32,
     "SHOW_SOURCE_TEXT": lambda v: isinstance(v, bool),
     "WINDOW_ALPHA": lambda v: (isinstance(v, (int, float))
+                               and not isinstance(v, bool)
                                and 0.3 <= v <= 1.0),
 }
 

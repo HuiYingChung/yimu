@@ -36,10 +36,26 @@ class FatalTranslatorError(RuntimeError):
 # Keep only letters, digits and CJK so half/full-width punctuation and
 # spacing differences don't break echo comparison.
 _NORM_RE = re.compile(r"[^0-9a-z一-鿿]+")
+_CJK_RE = re.compile(r"[一-鿿]")
 
 
 def _normalize(text: str) -> str:
     return _NORM_RE.sub("", text.lower())
+
+
+def _leaf_errors(exc: BaseException) -> list[BaseException]:
+    """Flatten nested ExceptionGroups into their leaf exceptions.
+
+    TaskGroup wraps child failures in an ExceptionGroup, so neither
+    `except FatalTranslatorError` nor substring checks on str(exc) see
+    the real error without unwrapping first.
+    """
+    if isinstance(exc, BaseExceptionGroup):
+        leaves: list[BaseException] = []
+        for sub in exc.exceptions:
+            leaves.extend(_leaf_errors(sub))
+        return leaves
+    return [exc]
 
 
 class Translator:
@@ -77,7 +93,11 @@ class Translator:
                 raise
             except Exception as exc:
                 traceback.print_exc(file=sys.stderr)
-                message = str(exc)
+                leaves = _leaf_errors(exc)
+                for leaf in leaves:
+                    if isinstance(leaf, FatalTranslatorError):
+                        raise leaf
+                message = " | ".join(str(leaf) for leaf in leaves)
                 if any(marker in message for marker in _FATAL_MARKERS):
                     raise FatalTranslatorError(
                         "Gemini rejected the API key. Check GEMINI_API_KEY "
@@ -158,7 +178,13 @@ class Translator:
         for target-language input, but output_transcription still streams
         the input verbatim (verified 2026-07 against the live API) — so
         subtitles must drop deltas already present in the recent input.
+
+        Only CJK-bearing deltas can be echoes of Chinese input; a pure
+        ASCII delta (e.g. the acronym "AI" inside a translation) must
+        never be suppressed just because the English source said it too.
         """
+        if not _CJK_RE.search(delta):
+            return False
         norm = _normalize(delta)
         return bool(norm) and norm in self._recent_input
 
