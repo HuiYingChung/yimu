@@ -29,6 +29,9 @@ CHUNK_MS = 100              # one audio chunk sent per 100 ms
 RECONNECT_BASE_DELAY_S = 1.0
 RECONNECT_MAX_DELAY_S = 30.0
 
+# --- UI language ---
+UI_LANGUAGE = "en"          # "en" or "zh-TW" — interface text only
+
 # --- Subtitle window ---
 WINDOW_WIDTH_RATIO = 0.7    # fraction of screen width
 WINDOW_BOTTOM_MARGIN = 80   # px from bottom of screen
@@ -46,6 +49,7 @@ _SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "settings.json")
 # name -> validator; invalid or missing values keep the default above
 _USER_SETTINGS = {
     "PROVIDER": lambda v: v in ("gemini", "openai"),
+    "UI_LANGUAGE": lambda v: v in ("en", "zh-TW"),
     "FONT_SIZE": lambda v: isinstance(v, int) and 10 <= v <= 32,
     "MAX_LINES": lambda v: (isinstance(v, int) and not isinstance(v, bool)
                             and 1 <= v <= 10),

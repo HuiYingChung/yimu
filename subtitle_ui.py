@@ -11,6 +11,7 @@ import tkinter as tk
 from collections import deque
 
 import config
+from strings import t
 
 _POLL_MS = 50
 
@@ -57,7 +58,7 @@ class SubtitleWindow:
             self._source_label.pack(fill="x", padx=12)
 
         self._label = tk.Label(
-            root, text="等待聲音…", font=(config.FONT_FAMILY, config.FONT_SIZE),
+            root, text=t("waiting"), font=(config.FONT_FAMILY, config.FONT_SIZE),
             fg="white", bg="black", justify="left", anchor="w",
             wraplength=self._width - 24,
         )
@@ -70,9 +71,11 @@ class SubtitleWindow:
         root.bind("<Configure>", lambda e: self._reposition())
 
         self._menu = tk.Menu(root, tearoff=0)
-        if on_open_settings is not None:
-            self._menu.add_command(label="設定…", command=on_open_settings)
-        self._menu.add_command(label="結束", command=self.close)
+        self._menu_has_settings = on_open_settings is not None
+        if self._menu_has_settings:
+            self._menu.add_command(label=t("menu_settings"),
+                                   command=on_open_settings)
+        self._menu.add_command(label=t("menu_quit"), command=self.close)
 
         self._moved_by_user = False
         self._last_geometry = ""
@@ -142,6 +145,11 @@ class SubtitleWindow:
 
     def apply_settings(self) -> None:
         """Re-apply user-adjustable config values to the live window."""
+        if self._menu_has_settings:
+            self._menu.entryconfigure(0, label=t("menu_settings"))
+            self._menu.entryconfigure(1, label=t("menu_quit"))
+        else:
+            self._menu.entryconfigure(0, label=t("menu_quit"))
         if self._lines.maxlen != config.MAX_LINES:
             # deque capacity is fixed at construction; rebuild, keeping
             # the most recent lines
@@ -163,7 +171,8 @@ class SubtitleWindow:
         if self._current:
             shown.append(self._current)
         shown = shown[-config.MAX_LINES:]
-        self._label.config(text="\n".join(shown) or " ")
+        # empty means no subtitles yet — show the waiting hint
+        self._label.config(text="\n".join(shown) or t("waiting"))
         # explicit geometry() disables auto-sizing, so grow/shrink manually
         self._root.update_idletasks()
         self._reposition()

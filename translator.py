@@ -19,6 +19,7 @@ from google import genai
 from google.genai import types
 
 import config
+from strings import t
 
 # Errors that retrying will not fix — stop instead of reconnect-looping.
 _FATAL_MARKERS = (
@@ -85,7 +86,7 @@ class Translator:
             try:
                 await self._run_session()
                 # server closed the session normally (time limit) — reconnect
-                self._on_status("session ended, reconnecting...")
+                self._on_status(t("reconnecting"))
                 delay = config.RECONNECT_BASE_DELAY_S
             except FatalTranslatorError:
                 raise
@@ -100,19 +101,14 @@ class Translator:
                 message = " | ".join(str(leaf) for leaf in leaves)
                 if any(marker in message for marker in _FATAL_MARKERS):
                     raise FatalTranslatorError(
-                        "Gemini rejected the API key. Check GEMINI_API_KEY "
-                        f"in .env ({message[:120]})"
+                        t("err_gemini_key", detail=message[:120])
                     ) from exc
                 if self._got_message:
                     delay = config.RECONNECT_BASE_DELAY_S
                 if "429" in message or "RESOURCE_EXHAUSTED" in message:
-                    self._on_status(
-                        f"rate limited (429), retrying in {delay:.0f}s..."
-                    )
+                    self._on_status(t("rate_limited", delay=f"{delay:.0f}"))
                 else:
-                    self._on_status(
-                        f"connection lost, retrying in {delay:.0f}s..."
-                    )
+                    self._on_status(t("conn_lost", delay=f"{delay:.0f}"))
                 await asyncio.sleep(delay)
                 delay = min(delay * 2, config.RECONNECT_MAX_DELAY_S)
 
@@ -132,7 +128,7 @@ class Translator:
         async with client.aio.live.connect(
             model=config.MODEL_NAME, config=live_config
         ) as session:
-            self._on_status("connected")
+            self._on_status(t("connected"))
             async with asyncio.TaskGroup() as tg:
                 tg.create_task(self._sender(session))
                 tg.create_task(self._receiver(session))
@@ -143,7 +139,7 @@ class Translator:
             if isinstance(chunk, Exception):
                 # audio capture thread died — nothing to translate anymore
                 raise FatalTranslatorError(
-                    f"audio capture failed: {chunk}"
+                    t("err_capture", detail=chunk)
                 ) from chunk
             await session.send_realtime_input(
                 audio=types.Blob(

@@ -1,0 +1,93 @@
+"""UI strings for both interface languages.
+
+t(key, **fmt) resolves against config.UI_LANGUAGE at call time, so a
+language switch affects every message from that moment on. Subtitle
+output itself is untouched — it is translation content, not UI.
+"""
+
+import config
+
+_STRINGS = {
+    # subtitle window
+    "waiting":          {"en": "Waiting for audio…",
+                         "zh": "等待聲音…"},
+    "menu_settings":    {"en": "Settings…",
+                         "zh": "設定…"},
+    "menu_quit":        {"en": "Quit",
+                         "zh": "結束"},
+
+    # settings panel
+    "settings_title":   {"en": "Yimu Settings",
+                         "zh": "譯幕 設定"},
+    "engine":           {"en": "Translation engine",
+                         "zh": "翻譯引擎"},
+    "engine_gemini":    {"en": "Gemini (free tier)",
+                         "zh": "Gemini（免費額度）"},
+    "engine_openai":    {"en": "OpenAI (paid, ~$2/hour)",
+                         "zh": "OpenAI（付費，約 $2/小時）"},
+    "font_size":        {"en": "Font size",
+                         "zh": "字級"},
+    "lines":            {"en": "Lines shown",
+                         "zh": "顯示行數"},
+    "show_source":      {"en": "Show source text",
+                         "zh": "顯示原文"},
+    "opacity":          {"en": "Opacity",
+                         "zh": "透明度"},
+    "ui_language":      {"en": "Interface language",
+                         "zh": "介面語言"},
+    "cancel":           {"en": "Cancel",
+                         "zh": "取消"},
+    "apply":            {"en": "Apply",
+                         "zh": "套用"},
+    "switching_engine": {"en": "Switching to {provider}, reconnecting…",
+                         "zh": "切換引擎：{provider}，重新連線中…"},
+
+    # status line
+    "listening":        {"en": "listening…",
+                         "zh": "聆聽中…"},
+    "connected":        {"en": "connected",
+                         "zh": "已連線"},
+    "reconnecting":     {"en": "session ended, reconnecting…",
+                         "zh": "session 結束，重新連線中…"},
+    "rate_limited":     {"en": "rate limited (429), retrying in {delay}s…",
+                         "zh": "額度受限（429），{delay} 秒後重試…"},
+    "conn_lost":        {"en": "connection lost, retrying in {delay}s…",
+                         "zh": "連線中斷，{delay} 秒後重試…"},
+
+    # errors
+    "err_prefix":       {"en": "Error: {msg}",
+                         "zh": "錯誤：{msg}"},
+    "err_unexpected":   {"en": "Unexpected error: {msg}",
+                         "zh": "未預期的錯誤：{msg}"},
+    "err_gemini_key":   {"en": "Gemini rejected the API key. Check "
+                               "GEMINI_API_KEY in .env ({detail})",
+                         "zh": "Gemini 拒絕了這把 key。檢查 .env 的 "
+                               "GEMINI_API_KEY（{detail}）"},
+    "err_openai_key":   {"en": "OpenAI rejected the API key. Check "
+                               "OPENAI_API_KEY in .env ({detail})",
+                         "zh": "OpenAI 拒絕了這把 key。檢查 .env 的 "
+                               "OPENAI_API_KEY（{detail}）"},
+    "err_capture":      {"en": "audio capture failed: {detail}",
+                         "zh": "音訊擷取失敗：{detail}"},
+    "err_bad_provider": {"en": "Invalid PROVIDER value: {value}.\n"
+                               "Valid options: {options}",
+                         "zh": "設定裡的 PROVIDER 值不合法:{value}。\n"
+                               "可用值:{options}"},
+    "err_missing_key":  {"en": "{key} is not set (PROVIDER = {provider}).\n\n"
+                               "1. Get an API key (Gemini: "
+                               "https://aistudio.google.com/apikey)\n"
+                               "2. Copy .env.example to .env and paste "
+                               "your key\n"
+                               "3. Run python main.py again",
+                         "zh": "{key} 未設定（PROVIDER = {provider}）。\n\n"
+                               "1. 取得 API key（Gemini:"
+                               "https://aistudio.google.com/apikey）\n"
+                               "2. 複製 .env.example 為 .env，貼上你的 key\n"
+                               "3. 重新執行 python main.py"},
+}
+
+
+def t(key: str, **fmt) -> str:
+    lang = "zh" if str(config.UI_LANGUAGE).lower().startswith("zh") else "en"
+    text = _STRINGS[key][lang]
+    return text.format(**fmt) if fmt else text

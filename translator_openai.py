@@ -20,6 +20,7 @@ import websockets
 from opencc import OpenCC
 
 import config
+from strings import t
 from translator import FatalTranslatorError, _CJK_RE, _leaf_errors, _normalize
 
 # The endpoint only outputs generic 'zh' (Simplified); convert client-side
@@ -81,7 +82,7 @@ class Translator:
             self._got_message = False
             try:
                 await self._run_session()
-                self._on_status("session ended, reconnecting...")
+                self._on_status(t("reconnecting"))
                 delay = config.RECONNECT_BASE_DELAY_S
             except FatalTranslatorError:
                 raise
@@ -96,19 +97,14 @@ class Translator:
                 message = " | ".join(str(leaf) for leaf in leaves)
                 if any(marker in message for marker in _FATAL_MARKERS):
                     raise FatalTranslatorError(
-                        "OpenAI 拒絕了這把 key。檢查 .env 的 OPENAI_API_KEY "
-                        f"（{message[:120]}）"
+                        t("err_openai_key", detail=message[:120])
                     ) from exc
                 if self._got_message:
                     delay = config.RECONNECT_BASE_DELAY_S
                 if "429" in message or "rate_limit" in message:
-                    self._on_status(
-                        f"rate limited (429), retrying in {delay:.0f}s..."
-                    )
+                    self._on_status(t("rate_limited", delay=f"{delay:.0f}"))
                 else:
-                    self._on_status(
-                        f"connection lost, retrying in {delay:.0f}s..."
-                    )
+                    self._on_status(t("conn_lost", delay=f"{delay:.0f}"))
                 await asyncio.sleep(delay)
                 delay = min(delay * 2, config.RECONNECT_MAX_DELAY_S)
 
@@ -134,7 +130,7 @@ class Translator:
                     }
                 },
             }))
-            self._on_status("connected")
+            self._on_status(t("connected"))
             async with asyncio.TaskGroup() as tg:
                 tg.create_task(self._sender(ws))
                 tg.create_task(self._receiver(ws))
@@ -156,7 +152,7 @@ class Translator:
                 if isinstance(chunk, Exception):
                     # audio capture thread died — nothing to translate
                     raise FatalTranslatorError(
-                        f"audio capture failed: {chunk}"
+                        t("err_capture", detail=chunk)
                     ) from chunk
                 tail_left = _SILENCE_AFTER_S
             await ws.send(json.dumps({

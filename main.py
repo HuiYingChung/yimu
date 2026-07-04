@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 
 import config
 from audio_capture import AudioCapture
+from strings import t
 from subtitle_ui import SubtitleWindow
 from translator import FatalTranslatorError
 
@@ -79,10 +80,10 @@ class Backend:
         except FatalTranslatorError as exc:
             # unrecoverable: leave the message on screen, don't die silently
             print(f"fatal: {exc}", file=sys.stderr)
-            self._window.push_status(f"錯誤：{exc}")
+            self._window.push_status(t("err_prefix", msg=exc))
         except Exception as exc:  # noqa: BLE001 — last-resort surface
             print(f"unexpected error: {exc}", file=sys.stderr)
-            self._window.push_status(f"未預期的錯誤：{exc}")
+            self._window.push_status(t("err_unexpected", msg=exc))
 
     async def _pipeline(self) -> None:
         self._loop = asyncio.get_running_loop()
@@ -92,7 +93,7 @@ class Backend:
         capture = AudioCapture(self._loop, queue,
                                sample_rate=translator_cls.SAMPLE_RATE)
         capture.start()
-        self._window.push_status("listening...")
+        self._window.push_status(t("listening"))
 
         translator = translator_cls(
             queue,
@@ -109,18 +110,12 @@ class Backend:
 def main() -> None:
     load_dotenv()
     if config.PROVIDER not in _PROVIDERS:
-        _fail_startup(
-            f"設定裡的 PROVIDER 值不合法：{config.PROVIDER!r}。\n"
-            f"可用值：{', '.join(_PROVIDERS)}"
-        )
+        _fail_startup(t("err_bad_provider", value=repr(config.PROVIDER),
+                        options=", ".join(_PROVIDERS)))
     env_key = _PROVIDERS[config.PROVIDER][1]
     if not os.environ.get(env_key):
-        _fail_startup(
-            f"{env_key} 未設定（PROVIDER = {config.PROVIDER!r}）。\n\n"
-            "1. 取得 API key（Gemini：https://aistudio.google.com/apikey）\n"
-            "2. 複製 .env.example 為 .env，貼上你的 key\n"
-            "3. 重新執行 python main.py"
-        )
+        _fail_startup(t("err_missing_key", key=env_key,
+                        provider=repr(config.PROVIDER)))
 
     root = tk.Tk()
     icon = os.path.join(os.path.dirname(os.path.abspath(__file__)),

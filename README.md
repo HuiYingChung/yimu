@@ -82,6 +82,8 @@ Right-click → 設定…. Apply takes effect immediately and persists to
 - **Show source text** — an extra line of source-language
   transcription above the translation.
 - **Opacity** — 30–100%.
+- **Interface language** — English (default) / 中文. UI text only;
+  subtitle output is always Traditional Chinese.
 
 Advanced defaults (target language, window width, etc.) live in
 `config.py`.
