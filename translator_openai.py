@@ -123,6 +123,15 @@ class Translator:
                 "type": "session.update",
                 "session": {
                     "audio": {
+                        # Source transcription is off by default; without it
+                        # the server never emits session.input_transcript.delta
+                        # (no source subtitles, and _is_echo has nothing to
+                        # match against).
+                        "input": {
+                            "transcription": {
+                                "model": "gpt-realtime-whisper",
+                            }
+                        },
                         "output": {
                             "language": _openai_language(
                                 config.TARGET_LANGUAGE_CODE),
@@ -221,6 +230,7 @@ async def _standalone() -> None:
     translator = Translator(
         queue,
         on_text=lambda d: print(d, end="", flush=True),
+        on_source_text=lambda d: print(f"\n[src] {d}", flush=True),
         on_status=lambda msg: print(f"\n[status] {msg}", flush=True),
     )
     try:
