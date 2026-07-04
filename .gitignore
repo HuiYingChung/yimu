@@ -13,6 +13,9 @@ venv/
 *.wav
 *.log
 
+# Design doc kept locally, not versioned
+realtime-subtitle-translator-plan.md.pdf
+
 # OS
 Thumbs.db
 desktop.ini
