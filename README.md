@@ -1,5 +1,12 @@
 # 譯幕 Yimu — 即時語音翻譯字幕工具
 
+> **Yimu** turns anything your Windows machine plays — videos, meetings,
+> livestreams — into live Traditional Chinese subtitles in a floating
+> window. Speech-native translation (Gemini Live / OpenAI Realtime),
+> no caption track needed, localized for Taiwan. Docs below are in
+> Traditional Chinese; the [case study](https://www.huiyingchung.com/yimu-case-study.html)
+> tells the full story in English.
+
 即時擷取電腦正在播放的聲音（YouTube、線上會議、任何英文或外語內容），
 透過 Gemini 或 OpenAI 的即時翻譯 API 翻成**繁體中文**，
 以懸浮字幕視窗顯示在螢幕下方。
