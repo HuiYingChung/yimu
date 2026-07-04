@@ -27,6 +27,7 @@ class SettingsDialog:
         self._font_size = tk.IntVar(value=config.FONT_SIZE)
         self._max_lines = tk.IntVar(value=config.MAX_LINES)
         self._show_source = tk.BooleanVar(value=config.SHOW_SOURCE_TEXT)
+        self._source_lines = tk.IntVar(value=config.SOURCE_MAX_LINES)
         self._alpha = tk.DoubleVar(value=config.WINDOW_ALPHA)
         self._language = tk.StringVar(value=config.UI_LANGUAGE)
 
@@ -62,20 +63,26 @@ class SettingsDialog:
             frame, text=t("show_source"), variable=self._show_source,
         ).grid(row=6, column=0, columnspan=2, sticky="w", pady=(6, 0))
 
-        ttk.Label(frame, text=t("opacity")).grid(
+        ttk.Label(frame, text=t("source_lines")).grid(
             row=7, column=0, sticky="w", pady=(6, 0))
+        ttk.Spinbox(
+            frame, from_=1, to=5, textvariable=self._source_lines, width=5,
+        ).grid(row=7, column=1, sticky="e", pady=(6, 0))
+
+        ttk.Label(frame, text=t("opacity")).grid(
+            row=8, column=0, sticky="w", pady=(6, 0))
         ttk.Scale(
             frame, from_=0.3, to=1.0, variable=self._alpha,
             orient="horizontal", length=140,
-        ).grid(row=7, column=1, sticky="e", pady=(6, 0))
+        ).grid(row=8, column=1, sticky="e", pady=(6, 0))
 
         ttk.Separator(frame).grid(
-            row=8, column=0, columnspan=2, sticky="ew", pady=8)
+            row=9, column=0, columnspan=2, sticky="ew", pady=8)
 
         ttk.Label(frame, text=t("ui_language")).grid(
-            row=9, column=0, sticky="w")
+            row=10, column=0, sticky="w")
         lang_row = ttk.Frame(frame)
-        lang_row.grid(row=9, column=1, sticky="e")
+        lang_row.grid(row=10, column=1, sticky="e")
         # language names always shown in their own language
         ttk.Radiobutton(
             lang_row, text="English", value="en", variable=self._language,
@@ -85,7 +92,7 @@ class SettingsDialog:
         ).grid(row=0, column=1)
 
         buttons = ttk.Frame(frame)
-        buttons.grid(row=10, column=0, columnspan=2, sticky="e", pady=(14, 0))
+        buttons.grid(row=11, column=0, columnspan=2, sticky="e", pady=(14, 0))
         ttk.Button(buttons, text=t("cancel"), command=top.destroy).grid(
             row=0, column=0, padx=(0, 8))
         ttk.Button(buttons, text=t("apply"), command=self._apply).grid(
@@ -125,6 +132,11 @@ class SettingsDialog:
             lines = config.MAX_LINES
         config.MAX_LINES = max(1, min(10, lines))
         config.SHOW_SOURCE_TEXT = bool(self._show_source.get())
+        try:
+            source_lines = int(self._source_lines.get())
+        except (tk.TclError, ValueError):
+            source_lines = config.SOURCE_MAX_LINES
+        config.SOURCE_MAX_LINES = max(1, min(5, source_lines))
         config.WINDOW_ALPHA = round(max(0.3, min(1.0, self._alpha.get())), 2)
 
         config.save_user_settings()

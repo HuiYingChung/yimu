@@ -8,6 +8,7 @@ Run standalone for a visual demo:  python subtitle_ui.py
 import queue
 import time
 import tkinter as tk
+import tkinter.font as tkfont
 from collections import deque
 
 import config
@@ -49,8 +50,11 @@ class SubtitleWindow:
         self._status_label.pack(fill="x", padx=12, pady=(4, 0))
 
         self._source_current = ""
+        # Font object (not a tuple) so _trim_source can measure pixel widths
+        self._source_font = tkfont.Font(
+            family=config.FONT_FAMILY, size=config.FONT_SIZE - 6)
         self._source_label = tk.Label(
-            root, text="", font=(config.FONT_FAMILY, config.FONT_SIZE - 6),
+            root, text="", font=self._source_font,
             fg="#bbbbbb", bg="black", justify="left", anchor="w",
             wraplength=self._width - 24,
         )
@@ -113,9 +117,8 @@ class SubtitleWindow:
             if kind == "text":
                 self._append_delta(payload)
             elif kind == "source" and config.SHOW_SOURCE_TEXT:
-                self._source_current = (
-                    self._source_current + payload
-                )[-120:]
+                self._source_current = self._trim_source(
+                    self._source_current + payload)
                 self._source_label.config(text=self._source_current)
             elif kind == "status":
                 self._status_label.config(text=payload)
@@ -136,12 +139,26 @@ class SubtitleWindow:
             if ch in config.SENTENCE_ENDINGS:
                 self._commit_line()
 
+    def _trim_source(self, text: str) -> str:
+        """Drop oldest words until the text fits SOURCE_MAX_LINES.
+
+        The label wraps at word boundaries, so a wrapped line rarely
+        uses its full pixel width — budget 90% per line to stay under
+        the target even with wrap slack.
+        """
+        max_px = int((self._width - 24) * config.SOURCE_MAX_LINES * 0.9)
+        while text and self._source_font.measure(text) > max_px:
+            head, sep, rest = text.partition(" ")
+            text = rest if sep else text[1:]
+        return text
+
     def _commit_line(self) -> None:
+        # source text is NOT cleared here: it scrolls independently,
+        # capped by SOURCE_MAX_LINES in _trim_source — clearing it per
+        # committed translation line kept it forever at ~1 line
         if self._current.strip():
             self._lines.append(self._current.strip())
         self._current = ""
-        self._source_current = ""
-        self._source_label.config(text="")
 
     def apply_settings(self) -> None:
         """Re-apply user-adjustable config values to the live window."""
@@ -156,8 +173,10 @@ class SubtitleWindow:
             self._lines = deque(self._lines, maxlen=config.MAX_LINES)
         self._root.attributes("-alpha", config.WINDOW_ALPHA)
         self._label.config(font=(config.FONT_FAMILY, config.FONT_SIZE))
-        self._source_label.config(
-            font=(config.FONT_FAMILY, config.FONT_SIZE - 6))
+        self._source_font.configure(size=config.FONT_SIZE - 6)
+        # font size or line budget may have changed — re-trim what's shown
+        self._source_current = self._trim_source(self._source_current)
+        self._source_label.config(text=self._source_current)
         if config.SHOW_SOURCE_TEXT:
             if not self._source_label.winfo_ismapped():
                 self._source_label.pack(fill="x", padx=12,
@@ -216,15 +235,22 @@ def _demo() -> None:
     """Standalone visual demo: feeds scripted deltas from a thread."""
     import threading
 
+    config.SHOW_SOURCE_TEXT = True  # demo always shows the source line
     root = tk.Tk()
     window = SubtitleWindow(root)
 
     script = [
         (0.5, "status", "connected"),
-        (0.5, "text", "大家早安，"),
+        (0.3, "source", "Good morning everyone, "),
+        (0.2, "text", "大家早安，"),
+        (0.3, "source", "and welcome to today's presentation. "),
         (0.4, "text", "歡迎來到"),
         (0.4, "text", "今天的簡報。"),
-        (0.8, "text", "人工智慧現在"),
+        (0.5, "source", "Artificial intelligence can now translate "
+                        "spoken language in real time, and this long "
+                        "sentence keeps growing to exercise the "
+                        "SOURCE_MAX_LINES trimming logic. "),
+        (0.4, "text", "人工智慧現在"),
         (0.4, "text", "可以即時翻譯口語。"),
         (0.8, "text", "這是第三句，"),
         (0.4, "text", "測試兩行捲動。"),
@@ -237,6 +263,8 @@ def _demo() -> None:
             time.sleep(delay)
             if kind == "text":
                 window.push_text(payload)
+            elif kind == "source":
+                window.push_source_text(payload)
             else:
                 window.push_status(payload)
 

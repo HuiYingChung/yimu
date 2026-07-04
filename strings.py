@@ -31,6 +31,8 @@ _STRINGS = {
                          "zh": "顯示行數"},
     "show_source":      {"en": "Show source text",
                          "zh": "顯示原文"},
+    "source_lines":     {"en": "Source lines",
+                         "zh": "原文行數"},
     "opacity":          {"en": "Opacity",
                          "zh": "透明度"},
     "ui_language":      {"en": "Interface language",

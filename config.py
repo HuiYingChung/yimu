@@ -39,6 +39,7 @@ WINDOW_ALPHA = 0.85
 FONT_FAMILY = "Microsoft JhengHei UI"
 FONT_SIZE = 16
 MAX_LINES = 3               # subtitle lines kept on screen
+SOURCE_MAX_LINES = 2        # max wrapped lines for the source transcript
 SENTENCE_PAUSE_S = 2.0      # break line after this long without new text
 SENTENCE_ENDINGS = "。？！?!"
 
@@ -53,6 +54,9 @@ _USER_SETTINGS = {
     "FONT_SIZE": lambda v: isinstance(v, int) and 10 <= v <= 32,
     "MAX_LINES": lambda v: (isinstance(v, int) and not isinstance(v, bool)
                             and 1 <= v <= 10),
+    "SOURCE_MAX_LINES": lambda v: (isinstance(v, int)
+                                   and not isinstance(v, bool)
+                                   and 1 <= v <= 5),
     "SHOW_SOURCE_TEXT": lambda v: isinstance(v, bool),
     "WINDOW_ALPHA": lambda v: (isinstance(v, (int, float))
                                and not isinstance(v, bool)
