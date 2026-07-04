@@ -11,8 +11,15 @@ venv/
 
 # Test artifacts
 *.wav
+*.log
+
+# Design doc kept locally, not versioned
+realtime-subtitle-translator-plan.md.pdf
 
 # OS
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# User settings written by the in-app settings panel
+settings.json

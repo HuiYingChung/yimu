@@ -3,3 +3,5 @@ PyAudioWPatch>=0.2.12
 numpy>=1.26
 scipy>=1.11
 python-dotenv>=1.0
+websockets>=12
+opencc-python-reimplemented>=0.1.7
