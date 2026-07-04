@@ -57,6 +57,10 @@
   （Gemini 16k、OpenAI 24k，送錯會變速變調）。
 - OpenAI 端點只收兩碼語言代碼（zh-Hant 會被拒，只有 zh＝簡體），
   繁化靠 OpenCC s2twp；echo 過濾要繁簡雙向比對。
+- OpenAI 靠「聽到結尾靜音」才 finalize 最後一句，而 loopback 停播
+  時不送 frame——兩者相撞會讓最後一句永遠卡住。解法：sender 斷流
+  後補送 3 秒靜音尾巴（見 translator_openai.py，計費考量有上限）。
+  Gemini 不需要，別把這邏輯搬過去。
 
 ## 環境變數
 見 `.env.example`。`GEMINI_API_KEY`（Google AI Studio 免費取得）；

@@ -26,6 +26,14 @@ from translator import FatalTranslatorError, _CJK_RE, _leaf_errors, _normalize
 # to Traditional with Taiwan phrasing so subtitles match the Gemini engine.
 _to_traditional = OpenCC("s2twp").convert
 
+# The endpoint finalizes an utterance only after hearing trailing silence
+# ("stream audio continuously, including silence"), but WASAPI loopback
+# stops delivering frames the moment playback stops — so when a video is
+# paused, the last sentence would hang unfinished forever. Feed a short
+# silence tail to flush it; capped because audio time is billed.
+_SILENCE_AFTER_S = 3.0   # how much trailing silence to send per audio stop
+_SILENCE_POLL_S = 0.2    # queue wait before deciding the audio stopped
+
 _WS_URL = ("wss://api.openai.com/v1/realtime/translations"
            f"?model={config.OPENAI_MODEL_NAME}")
 
@@ -132,13 +140,25 @@ class Translator:
                 tg.create_task(self._receiver(ws))
 
     async def _sender(self, ws) -> None:
+        chunk_bytes = int(self.SAMPLE_RATE * config.CHUNK_MS / 1000) * 2
+        silence = bytes(chunk_bytes)
+        tail_left = 0.0
         while True:
-            chunk = await self._queue.get()
-            if isinstance(chunk, Exception):
-                # audio capture thread died — nothing to translate anymore
-                raise FatalTranslatorError(
-                    f"audio capture failed: {chunk}"
-                ) from chunk
+            try:
+                chunk = await asyncio.wait_for(
+                    self._queue.get(), timeout=_SILENCE_POLL_S)
+            except asyncio.TimeoutError:
+                if tail_left <= 0:
+                    continue  # tail spent — stay quiet until real audio
+                tail_left -= config.CHUNK_MS / 1000
+                chunk = silence
+            else:
+                if isinstance(chunk, Exception):
+                    # audio capture thread died — nothing to translate
+                    raise FatalTranslatorError(
+                        f"audio capture failed: {chunk}"
+                    ) from chunk
+                tail_left = _SILENCE_AFTER_S
             await ws.send(json.dumps({
                 "type": "session.input_audio_buffer.append",
                 "audio": base64.b64encode(chunk).decode("ascii"),
