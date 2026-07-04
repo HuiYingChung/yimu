@@ -142,6 +142,10 @@ class SubtitleWindow:
 
     def apply_settings(self) -> None:
         """Re-apply user-adjustable config values to the live window."""
+        if self._lines.maxlen != config.MAX_LINES:
+            # deque capacity is fixed at construction; rebuild, keeping
+            # the most recent lines
+            self._lines = deque(self._lines, maxlen=config.MAX_LINES)
         self._root.attributes("-alpha", config.WINDOW_ALPHA)
         self._label.config(font=(config.FONT_FAMILY, config.FONT_SIZE))
         self._source_label.config(

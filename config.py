@@ -47,6 +47,8 @@ _SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "settings.json")
 _USER_SETTINGS = {
     "PROVIDER": lambda v: v in ("gemini", "openai"),
     "FONT_SIZE": lambda v: isinstance(v, int) and 10 <= v <= 32,
+    "MAX_LINES": lambda v: (isinstance(v, int) and not isinstance(v, bool)
+                            and 1 <= v <= 10),
     "SHOW_SOURCE_TEXT": lambda v: isinstance(v, bool),
     "WINDOW_ALPHA": lambda v: (isinstance(v, (int, float))
                                and not isinstance(v, bool)

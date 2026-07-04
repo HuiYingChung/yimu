@@ -23,6 +23,7 @@ class SettingsDialog:
 
         self._provider = tk.StringVar(value=config.PROVIDER)
         self._font_size = tk.IntVar(value=config.FONT_SIZE)
+        self._max_lines = tk.IntVar(value=config.MAX_LINES)
         self._show_source = tk.BooleanVar(value=config.SHOW_SOURCE_TEXT)
         self._alpha = tk.DoubleVar(value=config.WINDOW_ALPHA)
 
@@ -47,19 +48,25 @@ class SettingsDialog:
             frame, from_=10, to=32, textvariable=self._font_size, width=5,
         ).grid(row=4, column=1, sticky="e")
 
+        ttk.Label(frame, text="顯示行數").grid(
+            row=5, column=0, sticky="w", pady=(6, 0))
+        ttk.Spinbox(
+            frame, from_=1, to=10, textvariable=self._max_lines, width=5,
+        ).grid(row=5, column=1, sticky="e", pady=(6, 0))
+
         ttk.Checkbutton(
             frame, text="顯示原文", variable=self._show_source,
-        ).grid(row=5, column=0, columnspan=2, sticky="w", pady=(6, 0))
+        ).grid(row=6, column=0, columnspan=2, sticky="w", pady=(6, 0))
 
         ttk.Label(frame, text="透明度").grid(
-            row=6, column=0, sticky="w", pady=(6, 0))
+            row=7, column=0, sticky="w", pady=(6, 0))
         ttk.Scale(
             frame, from_=0.3, to=1.0, variable=self._alpha,
             orient="horizontal", length=140,
-        ).grid(row=6, column=1, sticky="e", pady=(6, 0))
+        ).grid(row=7, column=1, sticky="e", pady=(6, 0))
 
         buttons = ttk.Frame(frame)
-        buttons.grid(row=7, column=0, columnspan=2, sticky="e", pady=(14, 0))
+        buttons.grid(row=8, column=0, columnspan=2, sticky="e", pady=(14, 0))
         ttk.Button(buttons, text="取消", command=top.destroy).grid(
             row=0, column=0, padx=(0, 8))
         ttk.Button(buttons, text="套用", command=self._apply).grid(
@@ -92,6 +99,11 @@ class SettingsDialog:
         except (tk.TclError, ValueError):
             size = config.FONT_SIZE  # keep current on garbage input
         config.FONT_SIZE = max(10, min(32, size))
+        try:
+            lines = int(self._max_lines.get())
+        except (tk.TclError, ValueError):
+            lines = config.MAX_LINES
+        config.MAX_LINES = max(1, min(10, lines))
         config.SHOW_SOURCE_TEXT = bool(self._show_source.get())
         config.WINDOW_ALPHA = round(max(0.3, min(1.0, self._alpha.get())), 2)
 
