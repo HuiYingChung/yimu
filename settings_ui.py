@@ -65,10 +65,22 @@ class SettingsDialog:
         ttk.Button(buttons, text="套用", command=self._apply).grid(
             row=0, column=1)
 
-        # center the dialog on the screen, above the subtitle window
+        # open next to the subtitle window: the settings and the window
+        # they affect should share the same visual context
         top.update_idletasks()
-        x = (top.winfo_screenwidth() - top.winfo_reqwidth()) // 2
-        y = (top.winfo_screenheight() - top.winfo_reqheight()) // 2
+        dw, dh = top.winfo_reqwidth(), top.winfo_reqheight()
+        sw, sh = top.winfo_screenwidth(), top.winfo_screenheight()
+        try:
+            sub = window._root
+            wx, wy = sub.winfo_x(), sub.winfo_y()
+            ww, wh = sub.winfo_width(), sub.winfo_height()
+            x = max(8, min(wx + (ww - dw) // 2, sw - dw - 8))
+            if wy > sh // 2:  # subtitle in lower half -> panel above it
+                y = max(8, wy - dh - 12)
+            else:             # subtitle dragged up high -> panel below it
+                y = min(sh - dh - 8, wy + wh + 12)
+        except tk.TclError:   # subtitle window gone — fall back to center
+            x, y = (sw - dw) // 2, (sh - dh) // 2
         top.geometry(f"+{x}+{y}")
         top.grab_set()
 
