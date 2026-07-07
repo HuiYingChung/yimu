@@ -69,25 +69,9 @@ class SettingsDialog:
             sub, from_=1, to=10, textvariable=self._max_lines, width=5,
         ).grid(row=1, column=1, sticky="e", pady=(6, 0))
 
-        # --- window ---
-        win = ttk.LabelFrame(frame, text=t("section_window"), padding=8)
-        win.grid(row=2, column=0, sticky="ew", pady=(10, 0))
-        win.columnconfigure(0, weight=1)
-        ttk.Label(win, text=t("opacity")).grid(row=0, column=0, sticky="w")
-        ttk.Scale(
-            win, from_=0.3, to=1.0, variable=self._alpha,
-            orient="horizontal", length=140,
-        ).grid(row=0, column=1, sticky="e")
-        ttk.Label(win, text=t("window_width")).grid(
-            row=1, column=0, sticky="w", pady=(6, 0))
-        ttk.Scale(
-            win, from_=0.3, to=1.0, variable=self._width_ratio,
-            orient="horizontal", length=140,
-        ).grid(row=1, column=1, sticky="e", pady=(6, 0))
-
         # --- source text ---
         src = ttk.LabelFrame(frame, text=t("section_source"), padding=8)
-        src.grid(row=3, column=0, sticky="ew", pady=(10, 0))
+        src.grid(row=2, column=0, sticky="ew", pady=(10, 0))
         src.columnconfigure(0, weight=1)
         ttk.Checkbutton(
             src, text=t("show_source"), variable=self._show_source,
@@ -105,7 +89,7 @@ class SettingsDialog:
 
         # --- recording ---
         rec = ttk.LabelFrame(frame, text=t("section_record"), padding=8)
-        rec.grid(row=4, column=0, sticky="ew", pady=(10, 0))
+        rec.grid(row=3, column=0, sticky="ew", pady=(10, 0))
         ttk.Checkbutton(
             rec, text=t("save_transcript"), variable=self._save_transcript,
         ).grid(row=0, column=0, sticky="w")
@@ -115,6 +99,22 @@ class SettingsDialog:
         ttk.Checkbutton(
             rec, text=t("capture_mic"), variable=self._capture_mic,
         ).grid(row=2, column=0, sticky="w", pady=(6, 0))
+
+        # --- window ---
+        win = ttk.LabelFrame(frame, text=t("section_window"), padding=8)
+        win.grid(row=4, column=0, sticky="ew", pady=(10, 0))
+        win.columnconfigure(0, weight=1)
+        ttk.Label(win, text=t("opacity")).grid(row=0, column=0, sticky="w")
+        ttk.Scale(
+            win, from_=0.3, to=1.0, variable=self._alpha,
+            orient="horizontal", length=140,
+        ).grid(row=0, column=1, sticky="e")
+        ttk.Label(win, text=t("window_width")).grid(
+            row=1, column=0, sticky="w", pady=(6, 0))
+        ttk.Scale(
+            win, from_=0.3, to=1.0, variable=self._width_ratio,
+            orient="horizontal", length=140,
+        ).grid(row=1, column=1, sticky="e", pady=(6, 0))
 
         # --- interface language ---
         lang = ttk.Frame(frame)
