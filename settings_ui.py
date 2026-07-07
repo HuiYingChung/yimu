@@ -1,13 +1,16 @@
 """Settings panel: provider switch and simple appearance options.
 
-Opened from the subtitle window's right-click menu. Applying saves to
-settings.json, updates the live window, and restarts the translation
-backend when the provider or a capture/recording option changed. All
-labels resolve through strings.t() so the panel follows the
-interface-language setting.
+Opened from the subtitle window's right-click menu. Appearance options
+(fonts, lines, opacity, width) and the interface language preview live
+on the subtitle window as they change; Cancel restores everything and
+only Apply persists to settings.json. Provider and capture/recording
+toggles still need a backend restart on Apply.
 
-Layout: labeled sections (engine / subtitles / source text / recording)
-so the growing option list stays scannable.
+Every text-bearing widget is registered with its strings key so a
+language switch can relabel the whole dialog in place.
+
+Layout: labeled sections (engine / translation / source text /
+recording / window) so the growing option list stays scannable.
 """
 
 import tkinter as tk
@@ -42,7 +45,7 @@ class SettingsDialog:
         self._capture_mic = tk.BooleanVar(value=config.CAPTURE_MICROPHONE)
         self._language = tk.StringVar(value=config.UI_LANGUAGE)
 
-        # appearance options preview live; snapshot originals for Cancel
+        # options that preview live; snapshot originals for Cancel
         self._orig = {
             "WINDOW_ALPHA": config.WINDOW_ALPHA,
             "WINDOW_WIDTH_RATIO": config.WINDOW_WIDTH_RATIO,
@@ -51,91 +54,108 @@ class SettingsDialog:
             "MAX_LINES": config.MAX_LINES,
             "SOURCE_MAX_LINES": config.SOURCE_MAX_LINES,
             "SHOW_SOURCE_TEXT": config.SHOW_SOURCE_TEXT,
+            "UI_LANGUAGE": config.UI_LANGUAGE,
         }
         self._preview_after: str | None = None
+        # (widget, strings-key) pairs so a language switch can relabel
+        # the dialog in place
+        self._i18n: list = []
 
         frame = ttk.Frame(top, padding=16)
         frame.grid(sticky="nsew")
 
+        def reg(widget, key):
+            self._i18n.append((widget, key))
+            return widget
+
         # --- engine ---
-        engine = ttk.LabelFrame(frame, text=t("engine"), padding=8)
+        engine = reg(ttk.LabelFrame(frame, text=t("engine"), padding=8),
+                     "engine")
         engine.grid(row=0, column=0, sticky="ew")
-        ttk.Radiobutton(
+        reg(ttk.Radiobutton(
             engine, text=t("engine_gemini"), value="gemini",
             variable=self._provider,
-        ).grid(row=0, column=0, sticky="w")
-        ttk.Radiobutton(
+        ), "engine_gemini").grid(row=0, column=0, sticky="w")
+        reg(ttk.Radiobutton(
             engine, text=t("engine_openai"), value="openai",
             variable=self._provider,
-        ).grid(row=1, column=0, sticky="w")
+        ), "engine_openai").grid(row=1, column=0, sticky="w")
 
-        # --- subtitles ---
-        sub = ttk.LabelFrame(frame, text=t("section_subtitle"), padding=8)
+        # --- translation subtitles ---
+        sub = reg(ttk.LabelFrame(frame, text=t("section_subtitle"),
+                                 padding=8), "section_subtitle")
         sub.grid(row=1, column=0, sticky="ew", pady=(10, 0))
         sub.columnconfigure(0, weight=1)
-        ttk.Label(sub, text=t("font_size")).grid(row=0, column=0, sticky="w")
+        reg(ttk.Label(sub, text=t("font_size")),
+            "font_size").grid(row=0, column=0, sticky="w")
         ttk.Spinbox(
             sub, from_=10, to=32, textvariable=self._font_size, width=5,
         ).grid(row=0, column=1, sticky="e")
-        ttk.Label(sub, text=t("lines")).grid(
-            row=1, column=0, sticky="w", pady=(6, 0))
+        reg(ttk.Label(sub, text=t("lines")),
+            "lines").grid(row=1, column=0, sticky="w", pady=(6, 0))
         ttk.Spinbox(
             sub, from_=1, to=10, textvariable=self._max_lines, width=5,
         ).grid(row=1, column=1, sticky="e", pady=(6, 0))
 
         # --- source text ---
-        src = ttk.LabelFrame(frame, text=t("section_source"), padding=8)
+        src = reg(ttk.LabelFrame(frame, text=t("section_source"),
+                                 padding=8), "section_source")
         src.grid(row=2, column=0, sticky="ew", pady=(10, 0))
         src.columnconfigure(0, weight=1)
-        ttk.Checkbutton(
+        reg(ttk.Checkbutton(
             src, text=t("show_source"), variable=self._show_source,
-        ).grid(row=0, column=0, columnspan=2, sticky="w")
-        ttk.Label(src, text=t("source_font_size")).grid(
-            row=1, column=0, sticky="w", pady=(6, 0))
+        ), "show_source").grid(row=0, column=0, columnspan=2, sticky="w")
+        reg(ttk.Label(src, text=t("source_font_size")),
+            "source_font_size").grid(row=1, column=0, sticky="w",
+                                     pady=(6, 0))
         ttk.Spinbox(
             src, from_=8, to=28, textvariable=self._source_font_size, width=5,
         ).grid(row=1, column=1, sticky="e", pady=(6, 0))
-        ttk.Label(src, text=t("source_lines")).grid(
-            row=2, column=0, sticky="w", pady=(6, 0))
+        reg(ttk.Label(src, text=t("source_lines")),
+            "source_lines").grid(row=2, column=0, sticky="w", pady=(6, 0))
         ttk.Spinbox(
             src, from_=1, to=5, textvariable=self._source_lines, width=5,
         ).grid(row=2, column=1, sticky="e", pady=(6, 0))
 
         # --- recording ---
-        rec = ttk.LabelFrame(frame, text=t("section_record"), padding=8)
+        rec = reg(ttk.LabelFrame(frame, text=t("section_record"),
+                                 padding=8), "section_record")
         rec.grid(row=3, column=0, sticky="ew", pady=(10, 0))
-        ttk.Checkbutton(
+        reg(ttk.Checkbutton(
             rec, text=t("save_transcript"), variable=self._save_transcript,
-        ).grid(row=0, column=0, sticky="w")
+        ), "save_transcript").grid(row=0, column=0, sticky="w")
         content_row = ttk.Frame(rec)
         content_row.grid(row=1, column=0, sticky="w",
                          padx=(18, 0), pady=(2, 0))
         for col, (value, key) in enumerate(
                 [("both", "ts_both"), ("translation", "ts_translation"),
                  ("source", "ts_source")]):
-            ttk.Radiobutton(
+            reg(ttk.Radiobutton(
                 content_row, text=t(key), value=value,
                 variable=self._transcript_content,
-            ).grid(row=0, column=col, padx=(0, 8))
-        ttk.Checkbutton(
+            ), key).grid(row=0, column=col, padx=(0, 8))
+        reg(ttk.Checkbutton(
             rec, text=t("speaker_labels"), variable=self._speaker_labels,
-        ).grid(row=2, column=0, sticky="w", padx=(18, 0), pady=(2, 0))
-        ttk.Checkbutton(
+        ), "speaker_labels").grid(row=2, column=0, sticky="w",
+                                  padx=(18, 0), pady=(2, 0))
+        reg(ttk.Checkbutton(
             rec, text=t("capture_mic"), variable=self._capture_mic,
-        ).grid(row=3, column=0, sticky="w", pady=(6, 0))
+        ), "capture_mic").grid(row=3, column=0, sticky="w", pady=(6, 0))
 
         # --- window ---
-        win = ttk.LabelFrame(frame, text=t("section_window"), padding=8)
+        win = reg(ttk.LabelFrame(frame, text=t("section_window"),
+                                 padding=8), "section_window")
         win.grid(row=4, column=0, sticky="ew", pady=(10, 0))
         win.columnconfigure(0, weight=1)
-        ttk.Label(win, text=t("opacity")).grid(row=0, column=0, sticky="w")
+        reg(ttk.Label(win, text=t("opacity")),
+            "opacity").grid(row=0, column=0, sticky="w")
         ttk.Scale(
             win, from_=0.3, to=1.0, variable=self._alpha,
             orient="horizontal", length=140,
             command=lambda _v: self._schedule_preview(),
         ).grid(row=0, column=1, sticky="e")
-        ttk.Label(win, text=t("window_width")).grid(
-            row=1, column=0, sticky="w", pady=(6, 0))
+        reg(ttk.Label(win, text=t("window_width")),
+            "window_width").grid(row=1, column=0, sticky="w", pady=(6, 0))
         ttk.Scale(
             win, from_=0.3, to=1.0, variable=self._width_ratio,
             orient="horizontal", length=140,
@@ -146,8 +166,8 @@ class SettingsDialog:
         lang = ttk.Frame(frame)
         lang.grid(row=5, column=0, sticky="ew", pady=(10, 0))
         lang.columnconfigure(0, weight=1)
-        ttk.Label(lang, text=t("ui_language")).grid(row=0, column=0,
-                                                    sticky="w")
+        reg(ttk.Label(lang, text=t("ui_language")),
+            "ui_language").grid(row=0, column=0, sticky="w")
         # language names always shown in their own language
         ttk.Radiobutton(
             lang, text="English", value="en", variable=self._language,
@@ -158,19 +178,10 @@ class SettingsDialog:
 
         buttons = ttk.Frame(frame)
         buttons.grid(row=6, column=0, sticky="e", pady=(14, 0))
-        ttk.Button(buttons, text=t("cancel"), command=self._cancel).grid(
-            row=0, column=0, padx=(0, 8))
-        ttk.Button(buttons, text=t("apply"), command=self._apply).grid(
-            row=0, column=1)
-        # closing the dialog (title-bar X) must also undo the preview
-        top.protocol("WM_DELETE_WINDOW", self._cancel)
-
-        # text options preview live too (traces fire on every change,
-        # including typing — _preview guards partial/invalid input)
-        for var in (self._font_size, self._max_lines, self._show_source,
-                    self._source_lines, self._source_font_size):
-            var.trace_add("write", lambda *_: self._schedule_preview())
-        window.set_preview(True)  # placeholder text while dialog is open
+        reg(ttk.Button(buttons, text=t("cancel"), command=self._cancel),
+            "cancel").grid(row=0, column=0, padx=(0, 8))
+        reg(ttk.Button(buttons, text=t("apply"), command=self._apply),
+            "apply").grid(row=0, column=1)
 
         # open next to the subtitle window: the settings and the window
         # they affect should share the same visual context
@@ -190,9 +201,20 @@ class SettingsDialog:
             x, y = (sw - dw) // 2, (sh - dh) // 2
         top.geometry(f"+{x}+{y}")
         top.grab_set()
+        # closing the dialog (title-bar X) must also undo the preview
+        top.protocol("WM_DELETE_WINDOW", self._cancel)
+
+        # text options preview live too (traces fire on every change,
+        # including typing — _preview guards partial/invalid input)
+        for var in (self._font_size, self._max_lines, self._show_source,
+                    self._source_lines, self._source_font_size):
+            var.trace_add("write", lambda *_: self._schedule_preview())
+        self._language.trace_add(
+            "write", lambda *_: self._on_language_change())
+        window.set_preview(True)  # placeholder text while dialog is open
 
     def _schedule_preview(self) -> None:
-        """Debounce slider drags, then apply to the live window."""
+        """Debounce widget changes, then apply to the live window."""
         if self._preview_after is not None:
             self._top.after_cancel(self._preview_after)
         self._preview_after = self._top.after(50, self._preview)
@@ -200,6 +222,14 @@ class SettingsDialog:
     def _preview(self) -> None:
         self._preview_after = None
         self._pull_appearance()
+        self._window.apply_settings()
+
+    def _on_language_change(self) -> None:
+        """Relabel the dialog and the subtitle window immediately."""
+        config.UI_LANGUAGE = self._language.get()
+        self._top.title(t("settings_title"))
+        for widget, key in self._i18n:
+            widget.config(text=t(key))
         self._window.apply_settings()
 
     def _pull_appearance(self) -> None:
