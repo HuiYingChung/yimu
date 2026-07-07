@@ -40,6 +40,11 @@ class SettingsDialog:
         self._capture_mic = tk.BooleanVar(value=config.CAPTURE_MICROPHONE)
         self._language = tk.StringVar(value=config.UI_LANGUAGE)
 
+        # window sliders preview live; snapshot originals for Cancel
+        self._orig_alpha = config.WINDOW_ALPHA
+        self._orig_width = config.WINDOW_WIDTH_RATIO
+        self._preview_after: str | None = None
+
         frame = ttk.Frame(top, padding=16)
         frame.grid(sticky="nsew")
 
@@ -108,12 +113,14 @@ class SettingsDialog:
         ttk.Scale(
             win, from_=0.3, to=1.0, variable=self._alpha,
             orient="horizontal", length=140,
+            command=lambda _v: self._schedule_preview(),
         ).grid(row=0, column=1, sticky="e")
         ttk.Label(win, text=t("window_width")).grid(
             row=1, column=0, sticky="w", pady=(6, 0))
         ttk.Scale(
             win, from_=0.3, to=1.0, variable=self._width_ratio,
             orient="horizontal", length=140,
+            command=lambda _v: self._schedule_preview(),
         ).grid(row=1, column=1, sticky="e", pady=(6, 0))
 
         # --- interface language ---
@@ -132,10 +139,12 @@ class SettingsDialog:
 
         buttons = ttk.Frame(frame)
         buttons.grid(row=6, column=0, sticky="e", pady=(14, 0))
-        ttk.Button(buttons, text=t("cancel"), command=top.destroy).grid(
+        ttk.Button(buttons, text=t("cancel"), command=self._cancel).grid(
             row=0, column=0, padx=(0, 8))
         ttk.Button(buttons, text=t("apply"), command=self._apply).grid(
             row=0, column=1)
+        # closing the dialog (title-bar X) must also undo the preview
+        top.protocol("WM_DELETE_WINDOW", self._cancel)
 
         # open next to the subtitle window: the settings and the window
         # they affect should share the same visual context
@@ -155,6 +164,26 @@ class SettingsDialog:
             x, y = (sw - dw) // 2, (sh - dh) // 2
         top.geometry(f"+{x}+{y}")
         top.grab_set()
+
+    def _schedule_preview(self) -> None:
+        """Debounce slider drags, then apply to the live window."""
+        if self._preview_after is not None:
+            self._top.after_cancel(self._preview_after)
+        self._preview_after = self._top.after(50, self._preview)
+
+    def _preview(self) -> None:
+        self._preview_after = None
+        config.WINDOW_ALPHA = round(max(0.3, min(1.0, self._alpha.get())), 2)
+        config.WINDOW_WIDTH_RATIO = round(
+            max(0.3, min(1.0, self._width_ratio.get())), 2)
+        self._window.apply_settings()
+
+    def _cancel(self) -> None:
+        """Undo any live preview, then close without saving."""
+        config.WINDOW_ALPHA = self._orig_alpha
+        config.WINDOW_WIDTH_RATIO = self._orig_width
+        self._window.apply_settings()
+        self._top.destroy()
 
     def _int_or(self, var, fallback: int, lo: int, hi: int) -> int:
         try:
