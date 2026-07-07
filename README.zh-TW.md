@@ -13,6 +13,8 @@
 - 單人本機使用：無伺服器、無帳號，key 存本機 `.env`
 - 僅支援 **Windows**（音訊擷取用 WASAPI loopback）
 - 只顯示文字字幕，不播放翻譯語音；來源已是中文時字幕保持安靜
+- **會議友善**：可選的 Markdown 逐字稿（存到 Downloads）、
+  本機講者標記、麥克風混音——自己說的話也能進逐字稿
 
 完整設計故事見
 [case study](https://www.huiyingchung.com/yimu-case-study.html)（英文）。
@@ -23,6 +25,13 @@
 
 ```
 pip install -r requirements.txt
+```
+
+選裝——只有想在逐字稿裡標記講者才需要
+（會拖 PyTorch，約 1–2 GB）：
+
+```
+pip install resemblyzer
 ```
 
 ## 取得 API key
@@ -62,19 +71,30 @@ python main.py
 
 ## 設定面板
 
-右鍵 →「設定…」，按「套用」立即生效並記住
-（存到 `settings.json`，刪掉即回復預設）：
+右鍵 →「設定…」。外觀類選項**邊調邊即時預覽**（沒有字幕時
+視窗會顯示預覽文字），按「取消」全部還原、按「套用」才存進
+`settings.json`（刪掉檔案即回復預設）。選項分區如下：
 
 - **翻譯引擎**：Gemini（預設，免費）／ OpenAI（計費，
   需要 `.env` 有 `OPENAI_API_KEY`）。切換會自動重連，不用重開程式。
-- **字級**：10–32pt。
-- **顯示行數**：1–10 行（視窗高度自動跟著調整）。
-- **顯示原文**：字幕上方多一行原語言辨識文字。
-- **透明度**：30%–100%。
-- **介面語言**：English（預設）／中文。只影響介面文字，
+- **譯文**：字級（10–32pt）、顯示行數（1–10 行，
+  視窗高度自動跟著調整）。
+- **原文**：在字幕上方顯示原語言辨識文字，可獨立調
+  原文字級與行數（開關沒勾時子選項反灰）。
+- **記錄**：把逐字稿存成帶時間戳的 Markdown 檔（在 Downloads
+  資料夾）；內容可選「原文＋譯文／只有譯文／只有原文」，
+  對照模式下譯文以引用縮排配對在原文下方。
+  **標記講者**：聲音換人時插入「講者 1／2…」標題——本機運算、
+  免費、推測性質，需另裝 `resemblyzer`（選項旁有「說明」
+  連結）。**擷取麥克風**：把你的聲音混進翻譯流，開會時
+  自己說的話也會有字幕和逐字稿——建議戴耳機避免回音。
+  都不會多花 API 費用（計費看時長不看音量）。
+- **視窗**：透明度（30%–100%）、視窗寬度（螢幕的 30%–100%），
+  拖動即時預覽。
+- **介面語言**：English（預設）／中文，切換立即生效。
   字幕輸出一律是繁體中文。
 
-其他進階預設值（目標語言、視窗寬度等）在 `config.py`。
+其他進階預設值（目標語言、逐字稿資料夾等）在 `config.py`。
 
 ## 常見問題
 
@@ -101,12 +121,18 @@ python main.py
 
 ```
 audio_capture.py      WASAPI loopback → 依引擎取樣率的單聲道 PCM chunk
-                      （Gemini 16kHz／OpenAI 24kHz）→ asyncio.Queue
+                      （Gemini 16kHz／OpenAI 24kHz）→ asyncio.Queue；
+                      可選麥克風混音（以麥克風流當時鐘，loopback
+                      靜音也不會卡住）
 translator.py         Gemini Live session：音訊 queue 進、譯文 delta 出
 translator_openai.py  OpenAI gpt-realtime-translate（WebSocket、介面同上；
                       OpenCC 繁化層、echo 過濾、有上限的靜音尾巴）
-subtitle_ui.py        tkinter 懸浮字幕視窗（置頂、可拖曳）
-settings_ui.py        設定面板（引擎、字級、行數、原文、透明度）
+transcript.py         句子級 Markdown 逐字稿寫入器（時間戳、
+                      內容模式、講者標題）
+diarizer.py           可選的本機講者辨識（resemblyzer 聲紋嵌入
+                      ＋線上餘弦分群）
+subtitle_ui.py        tkinter 懸浮字幕視窗（置頂、可拖曳、預覽文字）
+settings_ui.py        分區設定面板（即時預覽、語言即時切換）
 main.py               tkinter 主執行緒 + 可重啟的背景 pipeline（Backend）
 config.py             預設值 + settings.json 載入/儲存
 ```

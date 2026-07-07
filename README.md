@@ -17,6 +17,9 @@ caption track is needed and no platform is off-limits.
 - Windows only (audio capture uses WASAPI loopback)
 - Subtitles only — the translated audio is discarded, and the window
   stays quiet when the source is already Chinese
+- **Meeting-ready**: optional Markdown transcripts (saved to
+  Downloads), local speaker labels, and microphone mixing so your own
+  voice makes it into the record
 
 The full design story is in the
 [case study](https://www.huiyingchung.com/yimu-case-study.html).
@@ -27,6 +30,13 @@ Requires Python 3.11+.
 
 ```
 pip install -r requirements.txt
+```
+
+Optional — only if you want speaker labels in transcripts (pulls
+PyTorch, ~1–2 GB):
+
+```
+pip install resemblyzer
 ```
 
 ## API keys
@@ -72,20 +82,33 @@ desktop shortcut "譯幕 Yimu" points to it).
 
 ## Settings panel
 
-Right-click → 設定…. Apply takes effect immediately and persists to
-`settings.json` (delete the file to reset):
+Right-click → 設定…. Appearance options **preview live** as you change
+them (an empty window shows placeholder text while the dialog is
+open); Cancel undoes the preview, Apply persists to `settings.json`
+(delete the file to reset). Options are grouped into sections:
 
 - **Engine** — Gemini (default, free) / OpenAI (metered; needs
   `OPENAI_API_KEY`). Switching reconnects in place, no restart.
-- **Font size** — 10–32 pt.
-- **Lines shown** — 1–10; the window height follows automatically.
-- **Show source text** — an extra line of source-language
-  transcription above the translation.
-- **Opacity** — 30–100%.
-- **Interface language** — English (default) / 中文. UI text only;
-  subtitle output is always Traditional Chinese.
+- **Translation** — font size (10–32 pt) and lines shown (1–10; the
+  window height follows automatically).
+- **Source text** — show the source-language transcription above the
+  translation, with its own font size and line count (greyed out
+  while the toggle is off).
+- **Recording** — save a timestamped Markdown transcript to your
+  Downloads folder (content: both / translation only / source only;
+  in "both" the translation is blockquoted under its source line).
+  **Label speakers** marks voice changes as 講者 1/2/… headings —
+  local, free, heuristic; needs the optional `resemblyzer` install
+  (a "how it works" link next to the option explains the details).
+  **Capture microphone** mixes your mic into the stream so meetings
+  include your side — wear headphones to avoid echo. No extra API
+  cost: billing is by duration, not loudness.
+- **Window** — opacity (30–100%) and window width (30–100% of the
+  screen), both with live preview.
+- **Interface language** — English (default) / 中文, switches the UI
+  instantly. Subtitle output is always Traditional Chinese.
 
-Advanced defaults (target language, window width, etc.) live in
+Advanced defaults (target language, transcript folder, etc.) live in
 `config.py`.
 
 ## FAQ
@@ -115,13 +138,21 @@ or OpenAI's realtime translation docs, then update `MODEL_NAME` /
 
 ```
 audio_capture.py      WASAPI loopback → mono PCM chunks at the engine's
-                      rate (16 kHz Gemini / 24 kHz OpenAI) → asyncio.Queue
+                      rate (16 kHz Gemini / 24 kHz OpenAI) → asyncio.Queue;
+                      optional mic mixing (mic-clocked, so silent loopback
+                      can't stall the stream)
 translator.py         Gemini Live session — audio queue in, text deltas out
 translator_openai.py  OpenAI gpt-realtime-translate over WebSocket
                       (same contract; OpenCC Traditional-Chinese layer,
                       echo filter, capped silence tail)
-subtitle_ui.py        tkinter floating subtitle window (topmost, draggable)
-settings_ui.py        settings panel (engine, font, lines, source, opacity)
+transcript.py         sentence-level Markdown transcript writer
+                      (timestamps, content modes, speaker headings)
+diarizer.py           optional local speaker labeling (resemblyzer
+                      embeddings + online cosine clustering)
+subtitle_ui.py        tkinter floating subtitle window (topmost, draggable,
+                      live-preview placeholders)
+settings_ui.py        sectioned settings panel with live preview and
+                      in-place language switching
 main.py               tkinter main thread + restartable asyncio Backend
 config.py             defaults + settings.json load/save
 ```
