@@ -68,22 +68,26 @@ class SettingsDialog:
         ttk.Spinbox(
             sub, from_=1, to=10, textvariable=self._max_lines, width=5,
         ).grid(row=1, column=1, sticky="e", pady=(6, 0))
-        ttk.Label(sub, text=t("opacity")).grid(
-            row=2, column=0, sticky="w", pady=(6, 0))
+
+        # --- window ---
+        win = ttk.LabelFrame(frame, text=t("section_window"), padding=8)
+        win.grid(row=2, column=0, sticky="ew", pady=(10, 0))
+        win.columnconfigure(0, weight=1)
+        ttk.Label(win, text=t("opacity")).grid(row=0, column=0, sticky="w")
         ttk.Scale(
-            sub, from_=0.3, to=1.0, variable=self._alpha,
+            win, from_=0.3, to=1.0, variable=self._alpha,
             orient="horizontal", length=140,
-        ).grid(row=2, column=1, sticky="e", pady=(6, 0))
-        ttk.Label(sub, text=t("window_width")).grid(
-            row=3, column=0, sticky="w", pady=(6, 0))
+        ).grid(row=0, column=1, sticky="e")
+        ttk.Label(win, text=t("window_width")).grid(
+            row=1, column=0, sticky="w", pady=(6, 0))
         ttk.Scale(
-            sub, from_=0.3, to=1.0, variable=self._width_ratio,
+            win, from_=0.3, to=1.0, variable=self._width_ratio,
             orient="horizontal", length=140,
-        ).grid(row=3, column=1, sticky="e", pady=(6, 0))
+        ).grid(row=1, column=1, sticky="e", pady=(6, 0))
 
         # --- source text ---
         src = ttk.LabelFrame(frame, text=t("section_source"), padding=8)
-        src.grid(row=2, column=0, sticky="ew", pady=(10, 0))
+        src.grid(row=3, column=0, sticky="ew", pady=(10, 0))
         src.columnconfigure(0, weight=1)
         ttk.Checkbutton(
             src, text=t("show_source"), variable=self._show_source,
@@ -101,7 +105,7 @@ class SettingsDialog:
 
         # --- recording ---
         rec = ttk.LabelFrame(frame, text=t("section_record"), padding=8)
-        rec.grid(row=3, column=0, sticky="ew", pady=(10, 0))
+        rec.grid(row=4, column=0, sticky="ew", pady=(10, 0))
         ttk.Checkbutton(
             rec, text=t("save_transcript"), variable=self._save_transcript,
         ).grid(row=0, column=0, sticky="w")
@@ -114,7 +118,7 @@ class SettingsDialog:
 
         # --- interface language ---
         lang = ttk.Frame(frame)
-        lang.grid(row=4, column=0, sticky="ew", pady=(10, 0))
+        lang.grid(row=5, column=0, sticky="ew", pady=(10, 0))
         lang.columnconfigure(0, weight=1)
         ttk.Label(lang, text=t("ui_language")).grid(row=0, column=0,
                                                     sticky="w")
@@ -127,7 +131,7 @@ class SettingsDialog:
         ).grid(row=0, column=2)
 
         buttons = ttk.Frame(frame)
-        buttons.grid(row=5, column=0, sticky="e", pady=(14, 0))
+        buttons.grid(row=6, column=0, sticky="e", pady=(14, 0))
         ttk.Button(buttons, text=t("cancel"), command=top.destroy).grid(
             row=0, column=0, padx=(0, 8))
         ttk.Button(buttons, text=t("apply"), command=self._apply).grid(

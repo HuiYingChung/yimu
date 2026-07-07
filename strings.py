@@ -27,6 +27,8 @@ _STRINGS = {
                          "zh": "OpenAI（付費，約 $2/小時）"},
     "section_subtitle": {"en": "Subtitles",
                          "zh": "字幕"},
+    "section_window":   {"en": "Window",
+                         "zh": "視窗"},
     "section_source":   {"en": "Source text",
                          "zh": "原文"},
     "section_record":   {"en": "Recording",
