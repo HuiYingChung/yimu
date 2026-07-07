@@ -49,6 +49,12 @@ _STRINGS = {
                          "zh": "視窗寬度"},
     "save_transcript":  {"en": "Save transcript (Downloads folder)",
                          "zh": "儲存逐字稿（Downloads 資料夾）"},
+    "ts_both":          {"en": "Both",
+                         "zh": "原文＋譯文"},
+    "ts_translation":   {"en": "Translation only",
+                         "zh": "只有譯文"},
+    "ts_source":        {"en": "Source only",
+                         "zh": "只有原文"},
     "speaker_labels":   {"en": "Label speakers (local, heuristic)",
                          "zh": "標記講者（本機辨識，非精確）"},
     "capture_mic":      {"en": "Capture microphone (meetings; "

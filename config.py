@@ -28,6 +28,8 @@ SAVE_TRANSCRIPT = False
 SPEAKER_LABELS = False
 # Where transcript .md files are written.
 TRANSCRIPT_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
+# What goes into the transcript: "both", "translation", or "source".
+TRANSCRIPT_CONTENT = "both"
 
 # --- Audio ---
 TARGET_SAMPLE_RATE = 16000  # required by the Live API
@@ -78,6 +80,7 @@ _USER_SETTINGS = {
                                      and not isinstance(v, bool)
                                      and 0.3 <= v <= 1.0),
     "SAVE_TRANSCRIPT": lambda v: isinstance(v, bool),
+    "TRANSCRIPT_CONTENT": lambda v: v in ("both", "translation", "source"),
     "SPEAKER_LABELS": lambda v: isinstance(v, bool),
     "CAPTURE_MICROPHONE": lambda v: isinstance(v, bool),
     "WINDOW_ALPHA": lambda v: (isinstance(v, (int, float))

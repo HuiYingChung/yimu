@@ -41,6 +41,10 @@ _LABELS = {"source": "原文", "translation": "譯文"}
 # period, but the source stream is usually English — without "." source
 # sentences would only ever flush on pause and clump together.
 _ENDINGS = tuple(config.SENTENCE_ENDINGS + ".")
+# config.TRANSCRIPT_CONTENT values that include each stream; checked at
+# write time, so switching in settings applies without a reconnect
+_STREAM_MODES = {"source": ("both", "source"),
+                 "translation": ("both", "translation")}
 
 
 class _Segment:
@@ -81,6 +85,8 @@ class TranscriptRecorder:
         self._add("translation", delta)
 
     def _add(self, stream: str, delta: str) -> None:
+        if config.TRANSCRIPT_CONTENT not in _STREAM_MODES[stream]:
+            return
         now = time.monotonic()
         with self._lock:
             if self._closed:
@@ -130,8 +136,13 @@ class TranscriptRecorder:
         self._ensure_file()
         clock = datetime.now().strftime("%H:%M:%S")
         # only source lines can switch the speaker: translation text lags
-        # the audio, so its timestamps point at the wrong voice
-        if self._speaker_lookup is not None and stream == "source":
+        # the audio, so its timestamps point at the wrong voice. In
+        # translation-only mode fall back to translation lines (less
+        # accurate timing) so speaker headings still appear.
+        heading_stream = ("translation"
+                          if config.TRANSCRIPT_CONTENT == "translation"
+                          else "source")
+        if self._speaker_lookup is not None and stream == heading_stream:
             speaker = self._speaker_lookup(seg.started_at)
             if speaker is not None and speaker != self._current_speaker:
                 self._current_speaker = speaker

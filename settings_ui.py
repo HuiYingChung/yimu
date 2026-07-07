@@ -36,6 +36,8 @@ class SettingsDialog:
         self._alpha = tk.DoubleVar(value=config.WINDOW_ALPHA)
         self._width_ratio = tk.DoubleVar(value=config.WINDOW_WIDTH_RATIO)
         self._save_transcript = tk.BooleanVar(value=config.SAVE_TRANSCRIPT)
+        self._transcript_content = tk.StringVar(
+            value=config.TRANSCRIPT_CONTENT)
         self._speaker_labels = tk.BooleanVar(value=config.SPEAKER_LABELS)
         self._capture_mic = tk.BooleanVar(value=config.CAPTURE_MICROPHONE)
         self._language = tk.StringVar(value=config.UI_LANGUAGE)
@@ -98,12 +100,22 @@ class SettingsDialog:
         ttk.Checkbutton(
             rec, text=t("save_transcript"), variable=self._save_transcript,
         ).grid(row=0, column=0, sticky="w")
+        content_row = ttk.Frame(rec)
+        content_row.grid(row=1, column=0, sticky="w",
+                         padx=(18, 0), pady=(2, 0))
+        for col, (value, key) in enumerate(
+                [("both", "ts_both"), ("translation", "ts_translation"),
+                 ("source", "ts_source")]):
+            ttk.Radiobutton(
+                content_row, text=t(key), value=value,
+                variable=self._transcript_content,
+            ).grid(row=0, column=col, padx=(0, 8))
         ttk.Checkbutton(
             rec, text=t("speaker_labels"), variable=self._speaker_labels,
-        ).grid(row=1, column=0, sticky="w", padx=(18, 0), pady=(2, 0))
+        ).grid(row=2, column=0, sticky="w", padx=(18, 0), pady=(2, 0))
         ttk.Checkbutton(
             rec, text=t("capture_mic"), variable=self._capture_mic,
-        ).grid(row=2, column=0, sticky="w", pady=(6, 0))
+        ).grid(row=3, column=0, sticky="w", pady=(6, 0))
 
         # --- window ---
         win = ttk.LabelFrame(frame, text=t("section_window"), padding=8)
@@ -210,6 +222,8 @@ class SettingsDialog:
             self._source_lines, config.SOURCE_MAX_LINES, 1, 5)
         config.SHOW_SOURCE_TEXT = bool(self._show_source.get())
         config.SAVE_TRANSCRIPT = bool(self._save_transcript.get())
+        # content mode is checked at write time — applies live, no restart
+        config.TRANSCRIPT_CONTENT = self._transcript_content.get()
         config.SPEAKER_LABELS = bool(self._speaker_labels.get())
         config.CAPTURE_MICROPHONE = bool(self._capture_mic.get())
         config.WINDOW_ALPHA = round(max(0.3, min(1.0, self._alpha.get())), 2)
