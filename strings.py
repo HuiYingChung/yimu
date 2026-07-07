@@ -57,6 +57,30 @@ _STRINGS = {
                          "zh": "只有原文"},
     "speaker_labels":   {"en": "Label speakers (local, heuristic)",
                          "zh": "標記講者（本機辨識，非精確）"},
+    "speaker_help_link": {"en": "how it works",
+                          "zh": "說明"},
+    "speaker_help_title": {"en": "Speaker labels",
+                           "zh": "標記講者"},
+    "speaker_help_body": {
+        "en": "Analyzes voice characteristics locally on this computer "
+              "and writes 講者 1/2/… headings into the transcript when "
+              "the speaker changes.\n\n"
+              "Requirements:\n"
+              "• 'Save transcript' must be enabled\n"
+              "• One-time install: pip install resemblyzer "
+              "(pulls PyTorch, ~1-2 GB)\n"
+              "• The audio needs more than one voice to show any effect\n\n"
+              "No API calls, no extra cost. Detection is heuristic — "
+              "speaker count and switch timing may be imperfect.",
+        "zh": "在你的電腦本機分析聲音特徵，聲音換人時在逐字稿裡插入"
+              "「講者 1／2…」標題。\n\n"
+              "條件：\n"
+              "• 需勾選「儲存逐字稿」\n"
+              "• 需安裝一次套件：pip install resemblyzer"
+              "（含 PyTorch 約 1–2 GB）\n"
+              "• 音訊要有多位講者才看得出效果\n\n"
+              "不呼叫 API、不另外收費。辨識為推測性質，"
+              "人數與切換時間可能不完全準確。"},
     "capture_mic":      {"en": "Capture microphone (meetings; "
                                "use headphones)",
                          "zh": "擷取麥克風（開會用；建議戴耳機）"},

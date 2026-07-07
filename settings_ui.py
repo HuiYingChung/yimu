@@ -14,7 +14,7 @@ recording / window) so the growing option list stays scannable.
 """
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
 
 import config
 from strings import t
@@ -127,17 +127,35 @@ class SettingsDialog:
         content_row = ttk.Frame(rec)
         content_row.grid(row=1, column=0, sticky="w",
                          padx=(18, 0), pady=(2, 0))
+        # sub-options that only make sense while the transcript is on;
+        # greyed out otherwise (see _update_dependents)
+        self._transcript_dependents = []
         for col, (value, key) in enumerate(
                 [("both", "ts_both"), ("translation", "ts_translation"),
                  ("source", "ts_source")]):
-            reg(ttk.Radiobutton(
+            radio = reg(ttk.Radiobutton(
                 content_row, text=t(key), value=value,
                 variable=self._transcript_content,
-            ), key).grid(row=0, column=col, padx=(0, 8))
-        reg(ttk.Checkbutton(
-            rec, text=t("speaker_labels"), variable=self._speaker_labels,
-        ), "speaker_labels").grid(row=2, column=0, sticky="w",
-                                  padx=(18, 0), pady=(2, 0))
+            ), key)
+            radio.grid(row=0, column=col, padx=(0, 8))
+            self._transcript_dependents.append(radio)
+        speaker_row = ttk.Frame(rec)
+        speaker_row.grid(row=2, column=0, sticky="w",
+                         padx=(18, 0), pady=(2, 0))
+        speaker_check = reg(ttk.Checkbutton(
+            speaker_row, text=t("speaker_labels"),
+            variable=self._speaker_labels,
+        ), "speaker_labels")
+        speaker_check.grid(row=0, column=0)
+        self._transcript_dependents.append(speaker_check)
+        # small help link explaining how speaker labels work
+        self._speaker_help = reg(tk.Label(
+            speaker_row, text=t("speaker_help_link"),
+            fg="#0066cc", cursor="hand2",
+            font=("TkDefaultFont", 8, "underline"),
+        ), "speaker_help_link")
+        self._speaker_help.grid(row=0, column=1, padx=(6, 0))
+        self._speaker_help.bind("<Button-1>", self._show_speaker_help)
         reg(ttk.Checkbutton(
             rec, text=t("capture_mic"), variable=self._capture_mic,
         ), "capture_mic").grid(row=3, column=0, sticky="w", pady=(6, 0))
@@ -211,7 +229,25 @@ class SettingsDialog:
             var.trace_add("write", lambda *_: self._schedule_preview())
         self._language.trace_add(
             "write", lambda *_: self._on_language_change())
+        self._save_transcript.trace_add(
+            "write", lambda *_: self._update_dependents())
+        self._update_dependents()
         window.set_preview(True)  # placeholder text while dialog is open
+
+    def _update_dependents(self) -> None:
+        """Grey out transcript sub-options while the transcript is off."""
+        on = bool(self._save_transcript.get())
+        for widget in self._transcript_dependents:
+            widget.state(["!disabled"] if on else ["disabled"])
+        self._speaker_help.config(
+            state="normal" if on else "disabled",
+            cursor="hand2" if on else "arrow")
+
+    def _show_speaker_help(self, _event) -> None:
+        if str(self._speaker_help.cget("state")) == "disabled":
+            return
+        messagebox.showinfo(t("speaker_help_title"),
+                            t("speaker_help_body"), parent=self._top)
 
     def _schedule_preview(self) -> None:
         """Debounce widget changes, then apply to the live window."""
