@@ -83,6 +83,7 @@ class SubtitleWindow:
 
         self._moved_by_user = False
         self._last_geometry = ""
+        self._preview_on = False  # settings open: show placeholder text
         self._after_id = root.after(_POLL_MS, self._poll)
         self._reposition()
 
@@ -181,7 +182,7 @@ class SubtitleWindow:
         self._source_font.configure(size=config.SOURCE_FONT_SIZE)
         # font size or line budget may have changed — re-trim what's shown
         self._source_current = self._trim_source(self._source_current)
-        self._source_label.config(text=self._source_current)
+        self._refresh_source_label()
         if config.SHOW_SOURCE_TEXT:
             if not self._source_label.winfo_ismapped():
                 self._source_label.pack(fill="x", padx=12,
@@ -190,11 +191,31 @@ class SubtitleWindow:
             self._source_label.pack_forget()
         self._render()  # height may have changed; _render repositions
 
+    def set_preview(self, on: bool) -> None:
+        """Placeholder text while the settings dialog is open.
+
+        Live subtitles (if any) stay visible and are used for the
+        preview instead; the placeholder only fills an empty window so
+        size/line changes are immediately visible.
+        """
+        self._preview_on = on
+        self._refresh_source_label()
+        self._render()
+
+    def _refresh_source_label(self) -> None:
+        text = self._source_current
+        if not text and self._preview_on:
+            text = t("preview_source")
+        self._source_label.config(text=text)
+
     def _render(self) -> None:
         shown = list(self._lines)
         if self._current:
             shown.append(self._current)
         shown = shown[-config.MAX_LINES:]
+        if not shown and self._preview_on:
+            # one placeholder per line so "lines shown" is visible too
+            shown = [t("preview_line")] * config.MAX_LINES
         # empty means no subtitles yet — show the waiting hint
         self._label.config(text="\n".join(shown) or t("waiting"))
         # explicit geometry() disables auto-sizing, so grow/shrink manually

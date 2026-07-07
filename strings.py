@@ -71,6 +71,12 @@ _STRINGS = {
     "switching_engine": {"en": "Switching to {provider}, reconnecting…",
                          "zh": "切換引擎：{provider}，重新連線中…"},
 
+    # settings live-preview placeholders
+    "preview_line":     {"en": "Subtitle preview text 字幕預覽",
+                         "zh": "字幕預覽文字 subtitle preview"},
+    "preview_source":   {"en": "Source text preview appears here",
+                         "zh": "原文預覽 source text preview"},
+
     # status line
     "listening":        {"en": "listening…",
                          "zh": "聆聽中…"},

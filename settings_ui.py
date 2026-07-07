@@ -42,9 +42,16 @@ class SettingsDialog:
         self._capture_mic = tk.BooleanVar(value=config.CAPTURE_MICROPHONE)
         self._language = tk.StringVar(value=config.UI_LANGUAGE)
 
-        # window sliders preview live; snapshot originals for Cancel
-        self._orig_alpha = config.WINDOW_ALPHA
-        self._orig_width = config.WINDOW_WIDTH_RATIO
+        # appearance options preview live; snapshot originals for Cancel
+        self._orig = {
+            "WINDOW_ALPHA": config.WINDOW_ALPHA,
+            "WINDOW_WIDTH_RATIO": config.WINDOW_WIDTH_RATIO,
+            "FONT_SIZE": config.FONT_SIZE,
+            "SOURCE_FONT_SIZE": config.SOURCE_FONT_SIZE,
+            "MAX_LINES": config.MAX_LINES,
+            "SOURCE_MAX_LINES": config.SOURCE_MAX_LINES,
+            "SHOW_SOURCE_TEXT": config.SHOW_SOURCE_TEXT,
+        }
         self._preview_after: str | None = None
 
         frame = ttk.Frame(top, padding=16)
@@ -158,6 +165,13 @@ class SettingsDialog:
         # closing the dialog (title-bar X) must also undo the preview
         top.protocol("WM_DELETE_WINDOW", self._cancel)
 
+        # text options preview live too (traces fire on every change,
+        # including typing — _preview guards partial/invalid input)
+        for var in (self._font_size, self._max_lines, self._show_source,
+                    self._source_lines, self._source_font_size):
+            var.trace_add("write", lambda *_: self._schedule_preview())
+        window.set_preview(True)  # placeholder text while dialog is open
+
         # open next to the subtitle window: the settings and the window
         # they affect should share the same visual context
         top.update_idletasks()
@@ -185,15 +199,29 @@ class SettingsDialog:
 
     def _preview(self) -> None:
         self._preview_after = None
+        self._pull_appearance()
+        self._window.apply_settings()
+
+    def _pull_appearance(self) -> None:
+        """Copy appearance widget values into config (with guards)."""
         config.WINDOW_ALPHA = round(max(0.3, min(1.0, self._alpha.get())), 2)
         config.WINDOW_WIDTH_RATIO = round(
             max(0.3, min(1.0, self._width_ratio.get())), 2)
-        self._window.apply_settings()
+        config.FONT_SIZE = self._int_or(
+            self._font_size, config.FONT_SIZE, 10, 32)
+        config.SOURCE_FONT_SIZE = self._int_or(
+            self._source_font_size, config.SOURCE_FONT_SIZE, 8, 28)
+        config.MAX_LINES = self._int_or(
+            self._max_lines, config.MAX_LINES, 1, 10)
+        config.SOURCE_MAX_LINES = self._int_or(
+            self._source_lines, config.SOURCE_MAX_LINES, 1, 5)
+        config.SHOW_SOURCE_TEXT = bool(self._show_source.get())
 
     def _cancel(self) -> None:
         """Undo any live preview, then close without saving."""
-        config.WINDOW_ALPHA = self._orig_alpha
-        config.WINDOW_WIDTH_RATIO = self._orig_width
+        for name, value in self._orig.items():
+            setattr(config, name, value)
+        self._window.set_preview(False)
         self._window.apply_settings()
         self._top.destroy()
 
@@ -212,25 +240,15 @@ class SettingsDialog:
             or bool(self._capture_mic.get()) != config.CAPTURE_MICROPHONE)
         config.PROVIDER = self._provider.get()
         config.UI_LANGUAGE = self._language.get()
-        config.FONT_SIZE = self._int_or(
-            self._font_size, config.FONT_SIZE, 10, 32)
-        config.SOURCE_FONT_SIZE = self._int_or(
-            self._source_font_size, config.SOURCE_FONT_SIZE, 8, 28)
-        config.MAX_LINES = self._int_or(
-            self._max_lines, config.MAX_LINES, 1, 10)
-        config.SOURCE_MAX_LINES = self._int_or(
-            self._source_lines, config.SOURCE_MAX_LINES, 1, 5)
-        config.SHOW_SOURCE_TEXT = bool(self._show_source.get())
+        self._pull_appearance()
         config.SAVE_TRANSCRIPT = bool(self._save_transcript.get())
         # content mode is checked at write time — applies live, no restart
         config.TRANSCRIPT_CONTENT = self._transcript_content.get()
         config.SPEAKER_LABELS = bool(self._speaker_labels.get())
         config.CAPTURE_MICROPHONE = bool(self._capture_mic.get())
-        config.WINDOW_ALPHA = round(max(0.3, min(1.0, self._alpha.get())), 2)
-        config.WINDOW_WIDTH_RATIO = round(
-            max(0.3, min(1.0, self._width_ratio.get())), 2)
 
         config.save_user_settings()
+        self._window.set_preview(False)
         self._window.apply_settings()
         self._top.destroy()
         # capture/recording options are wired at pipeline start, so both
