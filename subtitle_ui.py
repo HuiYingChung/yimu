@@ -52,7 +52,7 @@ class SubtitleWindow:
         self._source_current = ""
         # Font object (not a tuple) so _trim_source can measure pixel widths
         self._source_font = tkfont.Font(
-            family=config.FONT_FAMILY, size=config.FONT_SIZE - 6)
+            family=config.FONT_FAMILY, size=config.SOURCE_FONT_SIZE)
         self._source_label = tk.Label(
             root, text="", font=self._source_font,
             fg="#bbbbbb", bg="black", justify="left", anchor="w",
@@ -173,7 +173,7 @@ class SubtitleWindow:
             self._lines = deque(self._lines, maxlen=config.MAX_LINES)
         self._root.attributes("-alpha", config.WINDOW_ALPHA)
         self._label.config(font=(config.FONT_FAMILY, config.FONT_SIZE))
-        self._source_font.configure(size=config.FONT_SIZE - 6)
+        self._source_font.configure(size=config.SOURCE_FONT_SIZE)
         # font size or line budget may have changed — re-trim what's shown
         self._source_current = self._trim_source(self._source_current)
         self._source_label.config(text=self._source_current)

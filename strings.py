@@ -25,6 +25,12 @@ _STRINGS = {
                          "zh": "Gemini（免費額度）"},
     "engine_openai":    {"en": "OpenAI (paid, ~$2/hour)",
                          "zh": "OpenAI（付費，約 $2/小時）"},
+    "section_subtitle": {"en": "Subtitles",
+                         "zh": "字幕"},
+    "section_source":   {"en": "Source text",
+                         "zh": "原文"},
+    "section_record":   {"en": "Recording",
+                         "zh": "記錄"},
     "font_size":        {"en": "Font size",
                          "zh": "字級"},
     "lines":            {"en": "Lines shown",
@@ -33,8 +39,19 @@ _STRINGS = {
                          "zh": "顯示原文"},
     "source_lines":     {"en": "Source lines",
                          "zh": "原文行數"},
+    "source_font_size": {"en": "Source font size",
+                         "zh": "原文字級"},
     "opacity":          {"en": "Opacity",
                          "zh": "透明度"},
+    "save_transcript":  {"en": "Save transcript (Downloads folder)",
+                         "zh": "儲存逐字稿（Downloads 資料夾）"},
+    "speaker_labels":   {"en": "Label speakers (local, heuristic)",
+                         "zh": "標記講者（本機辨識，非精確）"},
+    "capture_mic":      {"en": "Capture microphone (meetings; "
+                               "use headphones)",
+                         "zh": "擷取麥克風（開會用；建議戴耳機）"},
+    "transcript_on":    {"en": "transcript will start on reconnect",
+                         "zh": "逐字稿將於重新連線後開始記錄"},
     "ui_language":      {"en": "Interface language",
                          "zh": "介面語言"},
     "cancel":           {"en": "Cancel",
@@ -71,6 +88,10 @@ _STRINGS = {
                                "OPENAI_API_KEY（{detail}）"},
     "err_capture":      {"en": "audio capture failed: {detail}",
                          "zh": "音訊擷取失敗：{detail}"},
+    "err_diarizer":     {"en": "speaker labels off — run: "
+                               "pip install resemblyzer",
+                         "zh": "講者標記未啟用——請先執行 "
+                               "pip install resemblyzer"},
     "err_bad_provider": {"en": "Invalid PROVIDER value: {value}.\n"
                                "Valid options: {options}",
                          "zh": "設定裡的 PROVIDER 值不合法:{value}。\n"

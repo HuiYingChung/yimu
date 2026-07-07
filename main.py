@@ -90,21 +90,61 @@ class Backend:
         self._task = asyncio.current_task()
         translator_cls = _translator_class()
         queue: asyncio.Queue = asyncio.Queue()
-        capture = AudioCapture(self._loop, queue,
-                               sample_rate=translator_cls.SAMPLE_RATE)
+
+        # optional local speaker labeling (no API cost, heuristic)
+        diarizer = None
+        if config.SAVE_TRANSCRIPT and config.SPEAKER_LABELS:
+            try:
+                from diarizer import Diarizer
+
+                diarizer = Diarizer(translator_cls.SAMPLE_RATE)
+                diarizer.start()
+            except Exception as exc:  # noqa: BLE001 — feature is optional
+                print(f"speaker labels disabled: {exc}", file=sys.stderr)
+                self._window.push_status(t("err_diarizer"))
+                diarizer = None
+
+        capture = AudioCapture(
+            self._loop, queue,
+            sample_rate=translator_cls.SAMPLE_RATE,
+            tap=diarizer.feed if diarizer is not None else None,
+        )
         capture.start()
         self._window.push_status(t("listening"))
 
+        # transcript recorder taps both text streams before the UI
+        recorder = None
+        on_text = self._window.push_text
+        on_source_text = self._window.push_source_text
+        if config.SAVE_TRANSCRIPT:
+            from transcript import TranscriptRecorder
+
+            recorder = TranscriptRecorder(
+                speaker_lookup=(diarizer.speaker_at
+                                if diarizer is not None else None))
+
+            def on_text(delta, _ui=on_text):  # noqa: F811
+                recorder.add_translation(delta)
+                _ui(delta)
+
+            def on_source_text(delta, _ui=on_source_text):  # noqa: F811
+                recorder.add_source(delta)
+                _ui(delta)
+
         translator = translator_cls(
             queue,
-            on_text=self._window.push_text,
-            on_source_text=self._window.push_source_text,
+            on_text=on_text,
+            on_source_text=on_source_text,
             on_status=self._window.push_status,
         )
         try:
             await translator.run()
         finally:
             capture.stop()
+            if recorder is not None:
+                recorder.close()
+            if diarizer is not None:
+                diarizer.stop()
 
 
 def main() -> None:

@@ -3,6 +3,12 @@
 Chunks of raw 16-bit little-endian PCM (CHUNK_MS each) are pushed into an
 asyncio.Queue for the translator. Run standalone to record a 5-second wav
 for acceptance testing:  python audio_capture.py
+
+With config.CAPTURE_MICROPHONE on, the default microphone is mixed into
+the stream (for meetings: loopback only hears the remote side, never
+your own voice). The mic stream drives the clock in that mode — WASAPI
+loopback emits nothing during total silence, but a mic always delivers
+frames, so chunks keep flowing even when only the local user speaks.
 """
 
 import asyncio
@@ -52,10 +58,13 @@ class AudioCapture:
     """
 
     def __init__(self, loop: asyncio.AbstractEventLoop, queue: asyncio.Queue,
-                 sample_rate: int = config.TARGET_SAMPLE_RATE):
+                 sample_rate: int = config.TARGET_SAMPLE_RATE, tap=None):
         self._loop = loop
         self._queue = queue
         self._rate = sample_rate
+        # optional second consumer (e.g. the diarizer); called with each
+        # chunk on the capture thread, must return fast and never raise
+        self._tap = tap
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self.device_name = ""
@@ -71,7 +80,10 @@ class AudioCapture:
 
     def _run(self) -> None:
         try:
-            self._capture_loop()
+            if config.CAPTURE_MICROPHONE:
+                self._capture_mixed_loop()
+            else:
+                self._capture_loop()
         except Exception as exc:  # surface errors instead of dying silently
             self._push(exc)
 
@@ -115,11 +127,103 @@ class AudioCapture:
                         chunk = bytes(pending[:out_bytes_per_chunk])
                         del pending[:out_bytes_per_chunk]
                         self._push(chunk)
+                        if self._tap is not None:
+                            self._tap(chunk)
 
 
-def convert_block(raw: bytes, channels: int, src_rate: int,
-                  dst_rate: int) -> bytes:
-    """Convert an int16 interleaved block to mono int16 at dst_rate."""
+    def _capture_mixed_loop(self) -> None:
+        """Mic-clocked capture: mic + loopback mixed into one stream.
+
+        A helper thread drains the loopback into a float buffer; the mic
+        read loop (this thread) pulls matching sample counts out of it
+        (zeros when the loopback is silent and sends nothing) and emits
+        the sum. Both are converted to self._rate mono before mixing.
+        """
+        with pyaudio.PyAudio() as p:
+            dev = find_default_loopback(p)
+            mic = p.get_default_input_device_info()
+            self.device_name = f"{dev['name']} + {mic['name']}"
+
+            loop_buf: list[np.ndarray] = []  # float32 at self._rate
+            buf_lock = threading.Lock()
+            max_buffered = self._rate  # cap at 1 s to bound drift/memory
+
+            def loopback_reader() -> None:
+                rate = int(dev["defaultSampleRate"])
+                channels = int(dev["maxInputChannels"])
+                frames = int(rate * config.CHUNK_MS / 1000)
+                try:
+                    with p.open(
+                        format=pyaudio.paInt16, channels=channels, rate=rate,
+                        input=True, input_device_index=dev["index"],
+                        frames_per_buffer=frames,
+                    ) as stream:
+                        while not self._stop.is_set():
+                            raw = stream.read(frames,
+                                              exception_on_overflow=False)
+                            mono = to_mono_float(raw, channels, rate,
+                                                 self._rate)
+                            with buf_lock:
+                                loop_buf.append(mono)
+                                total = sum(len(a) for a in loop_buf)
+                                while total > max_buffered and len(loop_buf) > 1:
+                                    total -= len(loop_buf.pop(0))
+                except Exception as exc:  # noqa: BLE001
+                    self._push(exc)
+                    self._stop.set()
+
+            def take_loopback(n: int) -> np.ndarray:
+                """Pull n mixed-ready samples; pad with zeros if short."""
+                out = np.zeros(n, dtype=np.float32)
+                filled = 0
+                with buf_lock:
+                    while filled < n and loop_buf:
+                        block = loop_buf[0]
+                        need = n - filled
+                        if len(block) <= need:
+                            out[filled:filled + len(block)] = block
+                            filled += len(block)
+                            loop_buf.pop(0)
+                        else:
+                            out[filled:] = block[:need]
+                            loop_buf[0] = block[need:]
+                            filled = n
+                return out
+
+            reader = threading.Thread(target=loopback_reader, daemon=True)
+            reader.start()
+
+            mic_rate = int(mic["defaultSampleRate"])
+            mic_channels = max(1, int(mic["maxInputChannels"]))
+            mic_frames = int(mic_rate * config.CHUNK_MS / 1000)
+            out_frames = int(self._rate * config.CHUNK_MS / 1000)
+            pending = np.zeros(0, dtype=np.float32)
+
+            with p.open(
+                format=pyaudio.paInt16, channels=mic_channels, rate=mic_rate,
+                input=True, input_device_index=mic["index"],
+                frames_per_buffer=mic_frames,
+            ) as stream:
+                while not self._stop.is_set():
+                    raw = stream.read(mic_frames, exception_on_overflow=False)
+                    mono = to_mono_float(raw, mic_channels, mic_rate,
+                                         self._rate)
+                    pending = np.concatenate([pending, mono])
+                    while len(pending) >= out_frames:
+                        mic_part = pending[:out_frames]
+                        pending = pending[out_frames:]
+                        mixed = mic_part + take_loopback(out_frames)
+                        chunk = np.clip(mixed, -32768, 32767) \
+                            .astype("<i2").tobytes()
+                        self._push(chunk)
+                        if self._tap is not None:
+                            self._tap(chunk)
+            reader.join(timeout=2)
+
+
+def to_mono_float(raw: bytes, channels: int, src_rate: int,
+                  dst_rate: int) -> np.ndarray:
+    """Convert an int16 interleaved block to mono float32 at dst_rate."""
     samples = np.frombuffer(raw, dtype=np.int16)
     if channels > 1:
         samples = samples.reshape(-1, channels).mean(axis=1)
@@ -127,6 +231,13 @@ def convert_block(raw: bytes, channels: int, src_rate: int,
     if src_rate != dst_rate:
         g = np.gcd(src_rate, dst_rate)
         mono = resample_poly(mono, dst_rate // g, src_rate // g)
+    return mono
+
+
+def convert_block(raw: bytes, channels: int, src_rate: int,
+                  dst_rate: int) -> bytes:
+    """Convert an int16 interleaved block to mono int16 at dst_rate."""
+    mono = to_mono_float(raw, channels, src_rate, dst_rate)
     return np.clip(mono, -32768, 32767).astype("<i2").tobytes()
 
 

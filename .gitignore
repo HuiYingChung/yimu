@@ -23,3 +23,6 @@ desktop.ini
 
 # User settings written by the in-app settings panel
 settings.json
+
+# Saved transcripts (personal content, can grow large)
+transcripts/

@@ -5,3 +5,7 @@ scipy>=1.11
 python-dotenv>=1.0
 websockets>=12
 opencc-python-reimplemented>=0.1.7
+
+# Optional — only for transcript speaker labels (設定→標記講者).
+# Pulls PyTorch (~1-2 GB). Skip if you don't use the feature:
+#   pip install resemblyzer
