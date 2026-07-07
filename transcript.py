@@ -8,17 +8,19 @@ sentence punctuation or when no new delta arrived for a pause.
 Output: yimu_YYYYMMDD_HHMMSS.md in config.TRANSCRIPT_DIR (default:
 the user's Downloads folder).
 
-With speaker labels off:
+Lines carry no 原文/譯文 labels — the languages tell themselves apart.
+In "both" mode the translation is blockquoted under its source line;
+in single-stream modes every line is plain with a timestamp:
 
-    **[14:03:21]** 原文:So today we're going to talk about AI.
-    **[14:03:22]** 譯文:所以今天我們要談談 AI。
+    **[14:03:21]** So today we're going to talk about AI.
+    > 所以今天我們要談談 AI。
 
 With speaker labels on (config.SPEAKER_LABELS + diarizer.py), a heading
 is inserted whenever the voice changes:
 
     ### 講者 1（14:03:21）
 
-    **[14:03:21]** 原文:So today we're going to talk about AI.
+    **[14:03:21]** So today we're going to talk about AI.
 
 Speaker lookups use the source segment's start time; translation lines
 lag the audio by a couple of seconds and never switch the heading.
@@ -34,9 +36,6 @@ from datetime import datetime
 
 import config
 
-# labels are content markers, not UI text — source language is unknown
-# (not necessarily English), so keep them language-neutral
-_LABELS = {"source": "原文", "translation": "譯文"}
 # config.SENTENCE_ENDINGS is tuned for zh subtitles and lacks the ASCII
 # period, but the source stream is usually English — without "." source
 # sentences would only ever flush on pause and clump together.
@@ -147,8 +146,13 @@ class TranscriptRecorder:
             if speaker is not None and speaker != self._current_speaker:
                 self._current_speaker = speaker
                 self._file.write(f"\n### 講者 {speaker + 1}（{clock}）\n\n")
-        # trailing two spaces: Markdown hard line break
-        self._file.write(f"**[{clock}]** {_LABELS[stream]}:{text}  \n")
+        # trailing two spaces: Markdown hard line break. In "both" mode
+        # the translation is blockquoted under its source line (which
+        # already carries the timestamp); otherwise plain + timestamp.
+        if stream == "translation" and config.TRANSCRIPT_CONTENT == "both":
+            self._file.write(f"> {text}  \n")
+        else:
+            self._file.write(f"**[{clock}]** {text}  \n")
         self._file.flush()  # crash/kill must not lose the transcript
 
     def _ensure_file(self) -> None:
