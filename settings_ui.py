@@ -105,17 +105,21 @@ class SettingsDialog:
         reg(ttk.Checkbutton(
             src, text=t("show_source"), variable=self._show_source,
         ), "show_source").grid(row=0, column=0, columnspan=2, sticky="w")
-        reg(ttk.Label(src, text=t("source_font_size")),
-            "source_font_size").grid(row=1, column=0, sticky="w",
-                                     pady=(6, 0))
-        ttk.Spinbox(
-            src, from_=8, to=28, textvariable=self._source_font_size, width=5,
-        ).grid(row=1, column=1, sticky="e", pady=(6, 0))
-        reg(ttk.Label(src, text=t("source_lines")),
-            "source_lines").grid(row=2, column=0, sticky="w", pady=(6, 0))
-        ttk.Spinbox(
-            src, from_=1, to=5, textvariable=self._source_lines, width=5,
-        ).grid(row=2, column=1, sticky="e", pady=(6, 0))
+        # greyed out while "show source text" is off (_update_dependents)
+        self._source_dependents = []
+        sf_label = reg(ttk.Label(src, text=t("source_font_size")),
+                       "source_font_size")
+        sf_label.grid(row=1, column=0, sticky="w", pady=(6, 0))
+        sf_spin = ttk.Spinbox(
+            src, from_=8, to=28, textvariable=self._source_font_size, width=5)
+        sf_spin.grid(row=1, column=1, sticky="e", pady=(6, 0))
+        sl_label = reg(ttk.Label(src, text=t("source_lines")),
+                       "source_lines")
+        sl_label.grid(row=2, column=0, sticky="w", pady=(6, 0))
+        sl_spin = ttk.Spinbox(
+            src, from_=1, to=5, textvariable=self._source_lines, width=5)
+        sl_spin.grid(row=2, column=1, sticky="e", pady=(6, 0))
+        self._source_dependents += [sf_label, sf_spin, sl_label, sl_spin]
 
         # --- recording ---
         rec = reg(ttk.LabelFrame(frame, text=t("section_record"),
@@ -231,17 +235,22 @@ class SettingsDialog:
             "write", lambda *_: self._on_language_change())
         self._save_transcript.trace_add(
             "write", lambda *_: self._update_dependents())
+        self._show_source.trace_add(
+            "write", lambda *_: self._update_dependents())
         self._update_dependents()
         window.set_preview(True)  # placeholder text while dialog is open
 
     def _update_dependents(self) -> None:
-        """Grey out transcript sub-options while the transcript is off."""
+        """Grey out sub-options whose parent toggle is off."""
         on = bool(self._save_transcript.get())
         for widget in self._transcript_dependents:
             widget.state(["!disabled"] if on else ["disabled"])
         self._speaker_help.config(
             state="normal" if on else "disabled",
             cursor="hand2" if on else "arrow")
+        src_on = bool(self._show_source.get())
+        for widget in self._source_dependents:
+            widget.state(["!disabled"] if src_on else ["disabled"])
 
     def _show_speaker_help(self, _event) -> None:
         if str(self._speaker_help.cget("state")) == "disabled":
