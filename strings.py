@@ -43,6 +43,8 @@ _STRINGS = {
                          "zh": "原文字級"},
     "opacity":          {"en": "Opacity",
                          "zh": "透明度"},
+    "window_width":     {"en": "Window width",
+                         "zh": "視窗寬度"},
     "save_transcript":  {"en": "Save transcript (Downloads folder)",
                          "zh": "儲存逐字稿（Downloads 資料夾）"},
     "speaker_labels":   {"en": "Label speakers (local, heuristic)",

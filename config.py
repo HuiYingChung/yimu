@@ -74,6 +74,9 @@ _USER_SETTINGS = {
                                    and not isinstance(v, bool)
                                    and 1 <= v <= 5),
     "SHOW_SOURCE_TEXT": lambda v: isinstance(v, bool),
+    "WINDOW_WIDTH_RATIO": lambda v: (isinstance(v, (int, float))
+                                     and not isinstance(v, bool)
+                                     and 0.3 <= v <= 1.0),
     "SAVE_TRANSCRIPT": lambda v: isinstance(v, bool),
     "SPEAKER_LABELS": lambda v: isinstance(v, bool),
     "CAPTURE_MICROPHONE": lambda v: isinstance(v, bool),

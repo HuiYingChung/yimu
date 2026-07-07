@@ -34,6 +34,7 @@ class SettingsDialog:
         self._source_lines = tk.IntVar(value=config.SOURCE_MAX_LINES)
         self._source_font_size = tk.IntVar(value=config.SOURCE_FONT_SIZE)
         self._alpha = tk.DoubleVar(value=config.WINDOW_ALPHA)
+        self._width_ratio = tk.DoubleVar(value=config.WINDOW_WIDTH_RATIO)
         self._save_transcript = tk.BooleanVar(value=config.SAVE_TRANSCRIPT)
         self._speaker_labels = tk.BooleanVar(value=config.SPEAKER_LABELS)
         self._capture_mic = tk.BooleanVar(value=config.CAPTURE_MICROPHONE)
@@ -73,6 +74,12 @@ class SettingsDialog:
             sub, from_=0.3, to=1.0, variable=self._alpha,
             orient="horizontal", length=140,
         ).grid(row=2, column=1, sticky="e", pady=(6, 0))
+        ttk.Label(sub, text=t("window_width")).grid(
+            row=3, column=0, sticky="w", pady=(6, 0))
+        ttk.Scale(
+            sub, from_=0.3, to=1.0, variable=self._width_ratio,
+            orient="horizontal", length=140,
+        ).grid(row=3, column=1, sticky="e", pady=(6, 0))
 
         # --- source text ---
         src = ttk.LabelFrame(frame, text=t("section_source"), padding=8)
@@ -173,6 +180,8 @@ class SettingsDialog:
         config.SPEAKER_LABELS = bool(self._speaker_labels.get())
         config.CAPTURE_MICROPHONE = bool(self._capture_mic.get())
         config.WINDOW_ALPHA = round(max(0.3, min(1.0, self._alpha.get())), 2)
+        config.WINDOW_WIDTH_RATIO = round(
+            max(0.3, min(1.0, self._width_ratio.get())), 2)
 
         config.save_user_settings()
         self._window.apply_settings()

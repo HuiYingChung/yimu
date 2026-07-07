@@ -172,6 +172,11 @@ class SubtitleWindow:
             # the most recent lines
             self._lines = deque(self._lines, maxlen=config.MAX_LINES)
         self._root.attributes("-alpha", config.WINDOW_ALPHA)
+        # width may have changed: resize, and re-wrap both labels to match
+        self._width = int(self._root.winfo_screenwidth()
+                          * config.WINDOW_WIDTH_RATIO)
+        self._label.config(wraplength=self._width - 24)
+        self._source_label.config(wraplength=self._width - 24)
         self._label.config(font=(config.FONT_FAMILY, config.FONT_SIZE))
         self._source_font.configure(size=config.SOURCE_FONT_SIZE)
         # font size or line budget may have changed — re-trim what's shown
