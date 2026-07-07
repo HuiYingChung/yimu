@@ -205,7 +205,18 @@ class SubtitleWindow:
     def _refresh_source_label(self) -> None:
         text = self._source_current
         if not text and self._preview_on:
-            text = t("preview_source")
+            # repeat the sample until it exceeds the pixel budget, then
+            # trim with the same logic as live text, so the placeholder
+            # genuinely fills SOURCE_MAX_LINES wrapped lines
+            unit = t("preview_source") + " "
+            max_px = int((self._width - 24)
+                         * config.SOURCE_MAX_LINES * 0.9)
+            text = unit
+            for _ in range(50):  # hard cap — measure() could misbehave
+                if self._source_font.measure(text) > max_px:
+                    break
+                text += unit
+            text = self._trim_source(text)
         self._source_label.config(text=text)
 
     def _render(self) -> None:
