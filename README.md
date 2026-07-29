@@ -26,6 +26,9 @@ caption track is needed and no platform is off-limits.
 - **Meeting-ready**: optional Markdown transcripts (saved to
   Downloads), local speaker labels, and microphone mixing so your own
   voice makes it into the record
+- **On-demand AI summaries**: finish a recorded session, review exactly
+  what will leave the computer, then create a structured Markdown summary
+  with the selected Gemini or OpenAI engine
 
 The full design story is in the
 [case study](https://www.huiyingchung.com/yimu-case-study.html).
@@ -85,7 +88,13 @@ desktop shortcut "譯幕 Yimu" points to it).
 - **Drag** anywhere on the window to move it.
 - **Pause / resume**: use the button at the top-right of the subtitle window,
   or the first item in the right-click menu. Pausing stops both audio capture
-  and the live translation connection.
+  and the live translation connection without splitting the current
+  transcript.
+- **Finish + summarize**: choose **Finish** to close the current transcript.
+  Yimu then shows the provider, character count, and estimated number of
+  requests. The transcript is sent only if you confirm. A saved session can
+  be retried later — including after restarting Yimu — from
+  **Summarize last session…** in the right-click menu.
 - **Settings**: right-click → 設定….
 - **Quit**: press `Esc`, or right-click → 結束.
 
@@ -113,7 +122,10 @@ open); Cancel undoes the preview, Apply persists to `settings.json`
   (a "how it works" link next to the option explains the details).
   **Capture microphone** mixes your mic into the stream so meetings
   include your side — wear headphones to avoid echo. No extra API
-  cost: billing is by duration, not loudness.
+  cost: billing is by duration, not loudness. Pause/resume keeps writing to
+  the same logical session; **Finish** closes it. AI summary uses the source
+  transcript when available, otherwise the translation, and saves a sibling
+  `*_summary.md` file without overwriting earlier summaries.
 - **Window** — opacity (30–100%) and window width (30–100% of the
   screen), both with live preview.
 - **Interface language** — English (default) / 中文, switches the UI
@@ -131,9 +143,12 @@ requests.
 Run the same checks locally:
 
 ```powershell
-python -m compileall -q config.py languages.py main.py settings_ui.py strings.py subtitle_ui.py translator.py translator_openai.py tests
+python -m compileall -q config.py languages.py main.py settings_ui.py strings.py subtitle_ui.py summarizer.py transcript.py translator.py translator_openai.py tests
 python -m unittest discover -s tests -v
 ```
+
+All summary tests use local fakes. They do not load `.env`, use API keys, or
+send transcript text to either provider.
 
 ## FAQ
 
@@ -170,7 +185,11 @@ translator_openai.py  OpenAI gpt-realtime-translate over WebSocket
                       (same contract; OpenCC Traditional-Chinese layer,
                       echo filter, capped silence tail)
 transcript.py         sentence-level Markdown transcript writer
-                      (timestamps, content modes, speaker headings)
+                      (logical sessions, timestamps, content modes,
+                      speaker headings)
+summarizer.py          confirmed, on-demand structured summary through the
+                      selected provider; long-transcript map/reduce and
+                      collision-safe Markdown output
 diarizer.py           optional local speaker labeling (resemblyzer
                       embeddings + online cosine clustering)
 subtitle_ui.py        tkinter floating subtitle window (topmost, draggable,

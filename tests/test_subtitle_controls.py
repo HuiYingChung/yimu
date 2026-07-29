@@ -14,8 +14,14 @@ class SubtitleControlTests(unittest.TestCase):
             self.skipTest(f"Tk unavailable: {exc}")
         self.root.withdraw()
         self.toggle = mock.Mock()
+        self.finish = mock.Mock()
+        self.summarize = mock.Mock()
         self.window = SubtitleWindow(
-            self.root, on_toggle_translation=self.toggle)
+            self.root,
+            on_toggle_translation=self.toggle,
+            on_finish_session=self.finish,
+            on_summarize_last=self.summarize,
+        )
 
     def tearDown(self):
         if hasattr(self, "root"):
@@ -36,6 +42,28 @@ class SubtitleControlTests(unittest.TestCase):
 
         self.window._toggle_button.invoke()
         self.toggle.assert_called_once_with()
+        self.assertEqual(
+            self.window._finish_button.cget("state"), "normal")
+
+    def test_finish_and_summary_actions_follow_session_state(self):
+        self.assertEqual(
+            self.window._finish_button.cget("state"), "disabled")
+        self.window.push_runtime_state("running", t("connected"))
+        self.window._poll()
+        self.window._finish_button.invoke()
+        self.finish.assert_called_once_with()
+
+        self.window.set_summary_available(True)
+        self.window.push_runtime_state("finished", t("session_finished"))
+        self.window._poll()
+
+        self.assertEqual(
+            self.window._menu.entrycget(
+                self.window._menu_summary_index, "state"),
+            "normal",
+        )
+        self.window._menu.invoke(self.window._menu_summary_index)
+        self.summarize.assert_called_once_with()
 
     def test_paused_state_offers_resume(self):
         self.window.push_runtime_state("paused", t("paused"))

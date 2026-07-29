@@ -1,10 +1,12 @@
 import asyncio
 import threading
 import unittest
+from datetime import datetime
 from unittest import mock
 
 from main import Backend
 from strings import t
+from transcript import TranscriptSession
 
 
 class _WindowStub:
@@ -89,6 +91,36 @@ class BackendControlTests(unittest.TestCase):
         self.assertEqual(len(_FakeThread.instances), thread_count)
         self.assertEqual(
             self.window.runtime_events[-1], ("paused", t("paused")))
+
+    def test_restart_keeps_the_same_logical_transcript(self):
+        recorder = mock.Mock()
+        self.backend._recorder = recorder
+        self.backend.start()
+
+        self.backend.restart("reconnecting")
+
+        self.assertIs(self.backend._recorder, recorder)
+        recorder.close.assert_not_called()
+
+    def test_finish_closes_and_publishes_the_session(self):
+        now = datetime.now()
+        session = TranscriptSession(
+            transcript_path="transcript.md",
+            source_text="hello",
+            translation_text="",
+            started_at=now,
+            ended_at=now,
+        )
+        recorder = mock.Mock()
+        recorder.snapshot.return_value = session
+        self.backend._recorder = recorder
+
+        result = self.backend.finish_session()
+
+        recorder.close.assert_called_once_with()
+        self.assertIs(result, session)
+        self.assertIs(self.backend.last_session, session)
+        self.assertEqual(self.backend.state, "finished")
 
 
 class _CancellableBackend(Backend):

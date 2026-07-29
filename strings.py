@@ -23,6 +23,59 @@ _STRINGS = {
                          "zh": "繼續"},
     "action_retry":     {"en": "Retry",
                          "zh": "重試"},
+    "action_finish":    {"en": "Finish",
+                         "zh": "結束本次"},
+    "menu_summarize_last": {
+        "en": "Summarize last session…",
+        "zh": "摘要上次逐字稿…"},
+
+    # finish + on-demand summary
+    "finish_session_title": {
+        "en": "Finish this session?",
+        "zh": "要結束本次嗎？"},
+    "finish_session_body": {
+        "en": "Audio capture and live translation will stop. Any pending "
+              "transcript text will be saved.",
+        "zh": "音訊擷取與即時翻譯會停止，尚未寫入的逐字稿內容會先儲存。"},
+    "summary_unavailable_title": {
+        "en": "No transcript to summarize",
+        "zh": "沒有可摘要的逐字稿"},
+    "summary_unavailable_body": {
+        "en": "Enable “Save transcript” in Settings before starting a "
+              "session. Yimu does not record transcript text when that "
+              "option is off.",
+        "zh": "請先在設定中開啟「儲存逐字稿」再開始新的場次。未開啟時，"
+              "Yimu 不會暗中記錄逐字內容。"},
+    "summary_consent_title": {
+        "en": "Send transcript for AI summary?",
+        "zh": "要傳送逐字稿產生 AI 摘要嗎？"},
+    "summary_consent_body": {
+        "en": "This will send {chars:,} transcript characters from this "
+              "computer to {provider} in about {requests} request(s). "
+              "Provider charges and data policies may apply.\n\n"
+              "Nothing is sent unless you choose Yes.",
+        "zh": "這會把本機的 {chars:,} 個逐字稿字元傳送給 {provider}，"
+              "預計使用 {requests} 次請求；可能產生供應商費用，並適用其"
+              "資料政策。\n\n只有按「是」才會傳送。"},
+    "summary_saved_title": {
+        "en": "Summary saved",
+        "zh": "摘要已儲存"},
+    "summary_saved_body": {
+        "en": "Saved to:\n{path}\n\nOpen it now?",
+        "zh": "已儲存至：\n{path}\n\n現在開啟嗎？"},
+    "summary_failed_title": {
+        "en": "Could not create summary",
+        "zh": "無法產生摘要"},
+    "summary_failed_body": {
+        "en": "{detail}\n\nThe transcript remains on this computer. You "
+              "can retry from the right-click menu.",
+        "zh": "{detail}\n\n逐字稿仍保留在本機，可從右鍵選單重試。"},
+    "summary_open_failed_title": {
+        "en": "Could not open summary",
+        "zh": "無法開啟摘要"},
+    "summary_open_failed_body": {
+        "en": "The summary is saved, but Windows could not open it:\n{detail}",
+        "zh": "摘要已儲存，但 Windows 無法開啟檔案：\n{detail}"},
 
     # settings panel
     "settings_title":   {"en": "Yimu Settings",
@@ -124,6 +177,19 @@ _STRINGS = {
         "zh": "正在啟動音訊擷取與翻譯…"},
     "stopped":          {"en": "translation stopped",
                          "zh": "翻譯已停止"},
+    "session_finished": {"en": "session finished — transcript saved",
+                         "zh": "本次已結束・逐字稿已儲存"},
+    "session_finished_no_transcript": {
+        "en": "session finished — no transcript was recorded",
+        "zh": "本次已結束・未記錄逐字稿"},
+    "summarizing":      {"en": "creating AI summary…",
+                         "zh": "正在產生 AI 摘要…"},
+    "summary_saved_status": {
+        "en": "AI summary saved",
+        "zh": "AI 摘要已儲存"},
+    "summary_failed_status": {
+        "en": "summary failed — transcript is still saved",
+        "zh": "摘要失敗・逐字稿仍已儲存"},
     "paused":           {
         "en": "paused — audio capture and translation are off",
         "zh": "已暫停——音訊擷取與翻譯均已停止"},

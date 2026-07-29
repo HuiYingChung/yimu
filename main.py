@@ -50,7 +50,12 @@ class Backend:
 
     _ACTIVE_STATES = {"starting", "running"}
 
-    def __init__(self, window: SubtitleWindow):
+    def __init__(
+        self,
+        window: SubtitleWindow,
+        *,
+        restore_last_session: bool = False,
+    ):
         self._window = window
         self._thread: threading.Thread | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -59,6 +64,12 @@ class Backend:
         self._state_lock = threading.Lock()
         self._stop_requested = threading.Event()
         self._stop_requested.set()
+        self._recorder = None
+        self._last_session = None
+        if restore_last_session:
+            from transcript import load_latest_session
+
+            self._last_session = load_latest_session(config.TRANSCRIPT_DIR)
 
     @property
     def state(self) -> str:
@@ -68,6 +79,12 @@ class Backend:
     @property
     def is_running(self) -> bool:
         return self.state in self._ACTIVE_STATES
+
+    @property
+    def last_session(self):
+        """Most recently finished non-empty transcript session, if any."""
+        with self._state_lock:
+            return self._last_session
 
     def _set_state(self, state: str, message: str) -> None:
         with self._state_lock:
@@ -138,6 +155,37 @@ class Backend:
             return False
         return self.start(message)
 
+    def _finalize_recorder(self):
+        with self._state_lock:
+            recorder = self._recorder
+            self._recorder = None
+        if recorder is None:
+            return None
+        recorder.close()
+        session = recorder.snapshot()
+        if session.summary_text:
+            with self._state_lock:
+                self._last_session = session
+        return session
+
+    def finish_session(self):
+        """Stop translation and close the current logical transcript."""
+        if not self.stop():
+            return None
+        session = self._finalize_recorder()
+        message = (
+            t("session_finished")
+            if session is not None and session.summary_text
+            else t("session_finished_no_transcript")
+        )
+        self._set_state("finished", message)
+        return session
+
+    def shutdown(self) -> None:
+        """Stop all work and persist pending transcript text."""
+        self.stop()
+        self._finalize_recorder()
+
     def _run(self) -> None:
         failure_message = None
         try:
@@ -198,9 +246,13 @@ class Backend:
             if config.SAVE_TRANSCRIPT:
                 from transcript import TranscriptRecorder
 
-                recorder = TranscriptRecorder(
-                    speaker_lookup=(diarizer.speaker_at
-                                    if diarizer is not None else None))
+                with self._state_lock:
+                    recorder = self._recorder
+                    if recorder is None:
+                        recorder = TranscriptRecorder()
+                        self._recorder = recorder
+                recorder.set_speaker_lookup(
+                    diarizer.speaker_at if diarizer is not None else None)
 
                 def on_text(delta, _ui=on_text):  # noqa: F811
                     recorder.add_translation(delta)
@@ -221,7 +273,10 @@ class Backend:
             if capture is not None:
                 capture.stop()
             if recorder is not None:
-                recorder.close()
+                # Pause/reconnect belongs to the same logical session. Flush
+                # pending words, but keep the file open until Finish or Quit.
+                recorder.flush_pending()
+                recorder.set_speaker_lookup(None)
             if diarizer is not None:
                 diarizer.stop()
 
@@ -255,17 +310,116 @@ def main() -> None:
         if backend is not None:
             backend.toggle()
 
+    def summarize_last_session() -> None:
+        if backend is None:
+            return
+        session = backend.last_session
+        if session is None or not session.summary_text:
+            messagebox.showinfo(
+                t("summary_unavailable_title"),
+                t("summary_unavailable_body"),
+                parent=root,
+            )
+            return
+
+        from summarizer import estimate_request_count
+
+        request_count = estimate_request_count(session.summary_text)
+        if not messagebox.askyesno(
+            t("summary_consent_title"),
+            t(
+                "summary_consent_body",
+                chars=session.character_count,
+                provider=config.PROVIDER,
+                requests=request_count,
+            ),
+            parent=root,
+        ):
+            return
+
+        provider = config.PROVIDER
+        target_language = config.TARGET_LANGUAGE_CODE
+        window.push_runtime_state("summarizing", t("summarizing"))
+
+        def summarize_in_background() -> None:
+            try:
+                from summarizer import summarize_session, write_summary
+
+                result = summarize_session(
+                    session,
+                    provider=provider,
+                    target_language=target_language,
+                )
+                summary_path = write_summary(
+                    session, result, target_language)
+                outcome = ("ok", summary_path)
+            except Exception as exc:  # noqa: BLE001 — surface provider errors
+                outcome = ("error", str(exc))
+
+            def publish_result() -> None:
+                if outcome[0] == "error":
+                    window.push_runtime_state(
+                        "finished", t("summary_failed_status"))
+                    messagebox.showerror(
+                        t("summary_failed_title"),
+                        t("summary_failed_body", detail=outcome[1]),
+                        parent=root,
+                    )
+                    return
+                summary_path = outcome[1]
+                window.push_runtime_state(
+                    "finished", t("summary_saved_status"))
+                if messagebox.askyesno(
+                    t("summary_saved_title"),
+                    t("summary_saved_body", path=summary_path),
+                    parent=root,
+                ):
+                    try:
+                        os.startfile(summary_path)
+                    except OSError as exc:
+                        messagebox.showerror(
+                            t("summary_open_failed_title"),
+                            t("summary_open_failed_body", detail=exc),
+                            parent=root,
+                        )
+
+            window.push_main_thread(publish_result)
+
+        threading.Thread(
+            target=summarize_in_background,
+            daemon=True,
+        ).start()
+
+    def finish_session() -> None:
+        if backend is None:
+            return
+        if config.SAVE_TRANSCRIPT:
+            if not messagebox.askokcancel(
+                t("finish_session_title"),
+                t("finish_session_body"),
+                parent=root,
+            ):
+                return
+        session = backend.finish_session()
+        window.set_summary_available(backend.last_session is not None)
+        if session is None or not session.summary_text:
+            return
+        summarize_last_session()
+
     def shutdown() -> None:
         if backend is not None:
-            backend.stop()
+            backend.shutdown()
 
     window = SubtitleWindow(
         root,
         on_close=shutdown,
         on_open_settings=open_settings,
         on_toggle_translation=toggle_translation,
+        on_finish_session=finish_session,
+        on_summarize_last=summarize_last_session,
     )
-    backend = Backend(window)
+    backend = Backend(window, restore_last_session=True)
+    window.set_summary_available(backend.last_session is not None)
     backend.start()
     root.mainloop()
 
