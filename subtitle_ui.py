@@ -27,16 +27,20 @@ class SubtitleWindow:
     """
 
     def __init__(self, root: tk.Tk, on_close=None, on_open_settings=None,
-                 on_toggle_translation=None):
+                 on_toggle_translation=None, on_finish_session=None,
+                 on_summarize_last=None):
         self._root = root
         self._on_close = on_close
         self._on_toggle_translation = on_toggle_translation
+        self._on_finish_session = on_finish_session
+        self._on_summarize_last = on_summarize_last
         self._text_queue: queue.Queue = queue.Queue()
         self._lines: deque[str] = deque(maxlen=config.MAX_LINES)
         self._current = ""
         self._last_text_time = 0.0
         self._drag_offset = (0, 0)
         self._runtime_state = "stopped"
+        self._summary_available = False
 
         root.overrideredirect(True)
         root.attributes("-topmost", True)
@@ -78,6 +82,27 @@ class SubtitleWindow:
                 takefocus=False,
             )
             self._toggle_button.pack(side="right")
+        self._finish_button = None
+        if on_finish_session is not None:
+            self._finish_button = tk.Button(
+                self._status_bar,
+                text=t("action_finish"),
+                command=on_finish_session,
+                font=(config.FONT_FAMILY, 9),
+                fg="#eeeeee",
+                bg="#333333",
+                activeforeground="white",
+                activebackground="#4a4a4a",
+                disabledforeground="#777777",
+                relief="flat",
+                bd=0,
+                padx=8,
+                pady=1,
+                cursor="hand2",
+                takefocus=False,
+                state="disabled",
+            )
+            self._finish_button.pack(side="right", padx=(0, 5))
 
         self._source_current = ""
         # Font object (not a tuple) so _trim_source can measure pixel widths
@@ -106,16 +131,40 @@ class SubtitleWindow:
 
         self._menu = tk.Menu(root, tearoff=0)
         self._menu_toggle_index = None
+        self._menu_finish_index = None
+        self._menu_summary_index = None
+        has_session_actions = False
         if on_toggle_translation is not None:
             self._menu.add_command(label=t("action_start"),
                                    command=on_toggle_translation)
             self._menu_toggle_index = self._menu.index("end")
+            has_session_actions = True
+        if on_finish_session is not None:
+            self._menu.add_command(
+                label=t("action_finish"),
+                command=on_finish_session,
+                state="disabled",
+            )
+            self._menu_finish_index = self._menu.index("end")
+            has_session_actions = True
+        if on_summarize_last is not None:
+            self._menu.add_command(
+                label=t("menu_summarize_last"),
+                command=on_summarize_last,
+                state="disabled",
+            )
+            self._menu_summary_index = self._menu.index("end")
+            has_session_actions = True
+        if has_session_actions:
             self._menu.add_separator()
         self._menu_has_settings = on_open_settings is not None
+        self._menu_settings_index = None
         if self._menu_has_settings:
             self._menu.add_command(label=t("menu_settings"),
                                    command=on_open_settings)
+            self._menu_settings_index = self._menu.index("end")
         self._menu.add_command(label=t("menu_quit"), command=self.close)
+        self._menu_quit_index = self._menu.index("end")
 
         self._moved_by_user = False
         self._last_geometry = ""
@@ -138,6 +187,10 @@ class SubtitleWindow:
     def push_runtime_state(self, state: str, message: str) -> None:
         """Update control state and status text from any thread."""
         self._text_queue.put(("runtime", (state, message)))
+
+    def push_main_thread(self, callback) -> None:
+        """Schedule a callback through the same thread-safe UI queue."""
+        self._text_queue.put(("callback", callback))
 
     # --- main-thread machinery ---
 
@@ -166,6 +219,8 @@ class SubtitleWindow:
             elif kind == "runtime":
                 state, message = payload
                 self._apply_runtime_state(state, message)
+            elif kind == "callback":
+                payload()
         # pause timeout: commit the current line so old text stops growing
         if (self._current
                 and time.monotonic() - self._last_text_time
@@ -207,15 +262,11 @@ class SubtitleWindow:
     def apply_settings(self) -> None:
         """Re-apply user-adjustable config values to the live window."""
         self._refresh_controls()
-        settings_index = 2 if self._menu_toggle_index is not None else 0
-        if self._menu_has_settings:
+        if self._menu_settings_index is not None:
             self._menu.entryconfigure(
-                settings_index, label=t("menu_settings"))
-            self._menu.entryconfigure(
-                settings_index + 1, label=t("menu_quit"))
-        else:
-            self._menu.entryconfigure(
-                settings_index, label=t("menu_quit"))
+                self._menu_settings_index, label=t("menu_settings"))
+        self._menu.entryconfigure(
+            self._menu_quit_index, label=t("menu_quit"))
         if self._lines.maxlen != config.MAX_LINES:
             # deque capacity is fixed at construction; rebuild, keeping
             # the most recent lines
@@ -251,15 +302,54 @@ class SubtitleWindow:
             "paused": ("#e7b94f", "action_resume"),
             "error": ("#ef6a6a", "action_retry"),
             "stopped": ("#888888", "action_start"),
+            "finished": ("#888888", "action_start"),
+            "summarizing": ("#a78bfa", "action_start"),
         }
         color, action_key = styles.get(
             self._runtime_state, styles["stopped"])
         self._status_dot.config(fg=color)
+        busy = self._runtime_state == "summarizing"
         if self._toggle_button is not None:
-            self._toggle_button.config(text=t(action_key))
+            self._toggle_button.config(
+                text=t(action_key),
+                state="disabled" if busy else "normal",
+            )
         if self._menu_toggle_index is not None:
             self._menu.entryconfigure(
-                self._menu_toggle_index, label=t(action_key))
+                self._menu_toggle_index,
+                label=t(action_key),
+                state="disabled" if busy else "normal",
+            )
+        can_finish = self._runtime_state in {
+            "starting", "running", "paused", "error",
+        }
+        if self._finish_button is not None:
+            self._finish_button.config(
+                text=t("action_finish"),
+                state="normal" if can_finish else "disabled",
+            )
+        if self._menu_finish_index is not None:
+            self._menu.entryconfigure(
+                self._menu_finish_index,
+                label=t("action_finish"),
+                state="normal" if can_finish else "disabled",
+            )
+        if self._menu_summary_index is not None:
+            can_summarize = (
+                self._summary_available
+                and self._runtime_state
+                not in {"starting", "running", "summarizing"}
+            )
+            self._menu.entryconfigure(
+                self._menu_summary_index,
+                label=t("menu_summarize_last"),
+                state="normal" if can_summarize else "disabled",
+            )
+
+    def set_summary_available(self, available: bool) -> None:
+        """Enable or disable the retry action for the last transcript."""
+        self._summary_available = available
+        self._refresh_controls()
 
     def set_preview(self, on: bool) -> None:
         """Placeholder text while the settings dialog is open.

@@ -32,7 +32,9 @@ without playing audio never leaves empty files behind.
 import os
 import threading
 import time
+from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
 import config
 
@@ -44,6 +46,52 @@ _ENDINGS = tuple(config.SENTENCE_ENDINGS + ".")
 # write time, so switching in settings applies without a reconnect
 _STREAM_MODES = {"source": ("both", "source"),
                  "translation": ("both", "translation")}
+
+
+@dataclass(frozen=True)
+class TranscriptSession:
+    """Immutable text captured during one logical Yimu session."""
+
+    transcript_path: str | None
+    source_text: str
+    translation_text: str
+    started_at: datetime
+    ended_at: datetime
+
+    @property
+    def summary_text(self) -> str:
+        """Prefer original speech; fall back to translated text."""
+        return self.source_text.strip() or self.translation_text.strip()
+
+    @property
+    def character_count(self) -> int:
+        return len(self.summary_text)
+
+
+def load_latest_session(directory: str) -> TranscriptSession | None:
+    """Restore the newest saved transcript for summary retry after restart."""
+    folder = Path(directory)
+    try:
+        candidates = [
+            path for path in folder.glob("yimu_*.md")
+            if "_summary" not in path.stem
+        ]
+        path = max(candidates, key=lambda item: item.stat().st_mtime)
+        text = path.read_text(encoding="utf-8").strip()
+        stat = path.stat()
+    except (FileNotFoundError, OSError, ValueError):
+        return None
+    if not text:
+        return None
+    return TranscriptSession(
+        transcript_path=str(path),
+        # The Markdown may contain source, translation, or both according to
+        # the user's recording setting. Preserve it as one evidence document.
+        source_text=text,
+        translation_text="",
+        started_at=datetime.fromtimestamp(stat.st_ctime),
+        ended_at=datetime.fromtimestamp(stat.st_mtime),
+    )
 
 
 class _Segment:
@@ -69,9 +117,12 @@ class TranscriptRecorder:
     def __init__(self, speaker_lookup=None):
         self._lock = threading.Lock()
         self._segments = {"source": _Segment(), "translation": _Segment()}
+        self._captured = {"source": [], "translation": []}
         self._file = None
         self._path = None
         self._closed = False
+        self._started_at = datetime.now()
+        self._ended_at = None
         self._speaker_lookup = speaker_lookup
         self._current_speaker = None
 
@@ -102,6 +153,23 @@ class TranscriptRecorder:
 
     # --- lifecycle ---
 
+    def flush_pending(self) -> None:
+        """Flush incomplete sentences without ending the logical session."""
+        with self._lock:
+            if self._closed:
+                return
+            for stream in self._segments:
+                self._flush(stream)
+
+    def set_speaker_lookup(self, speaker_lookup) -> None:
+        """Use the current pipeline's diarizer after pause/reconnect."""
+        with self._lock:
+            if self._closed:
+                return
+            self._speaker_lookup = speaker_lookup
+            # Each diarizer starts a fresh local cluster numbering scheme.
+            self._current_speaker = None
+
     def close(self) -> None:
         """Flush pending segments and close the file. Idempotent."""
         with self._lock:
@@ -110,9 +178,23 @@ class TranscriptRecorder:
             for stream in self._segments:
                 self._flush(stream)
             self._closed = True
+            self._ended_at = datetime.now()
             if self._file is not None:
                 self._file.close()
                 self._file = None
+
+    def snapshot(self) -> TranscriptSession:
+        """Return the captured session. Close first for a final snapshot."""
+        with self._lock:
+            source_text = "\n".join(self._captured["source"])
+            translation_text = "\n".join(self._captured["translation"])
+            return TranscriptSession(
+                transcript_path=self._path,
+                source_text=source_text,
+                translation_text=translation_text,
+                started_at=self._started_at,
+                ended_at=self._ended_at or datetime.now(),
+            )
 
     @property
     def path(self) -> str | None:
@@ -132,6 +214,7 @@ class TranscriptRecorder:
         seg.text = ""
         if not text:
             return
+        self._captured[stream].append(text)
         self._ensure_file()
         clock = datetime.now().strftime("%H:%M:%S")
         # only source lines can switch the speaker: translation text lags

@@ -20,6 +20,8 @@
 - 只顯示文字字幕，不播放翻譯語音；來源已是目標語言時字幕保持安靜
 - **會議友善**：可選的 Markdown 逐字稿（存到 Downloads）、
   本機講者標記、麥克風混音——自己說的話也能進逐字稿
+- **按需 AI 摘要**：結束已記錄的場次後，先確認哪些內容會離開本機，
+  再用目前選擇的 Gemini 或 OpenAI 產生結構化 Markdown 摘要
 
 完整設計故事見
 [case study](https://www.huiyingchung.com/yimu-case-study.html)（英文）。
@@ -72,7 +74,11 @@ python main.py
 - 播放任何支援的來源語言，2～3 秒內出現所選目標語言的字幕。
 - **拖曳**：按住視窗任意處移動。
 - **暫停／繼續**：使用字幕視窗右上角按鈕，或右鍵選單第一項。暫停會
-  同時停止音訊擷取與即時翻譯連線。
+  同時停止音訊擷取與即時翻譯連線，但不會把逐字稿切成不同場次。
+- **結束本次＋摘要**：按「結束本次」封存目前逐字稿。Yimu 會先顯示
+  供應商、字元數與預估請求次數；只有你確認後才會傳送逐字稿。
+  已完成的場次即使重開 Yimu，也能從右鍵選單的
+  「摘要上次逐字稿…」重試。
 - **設定**：右鍵選單選「設定…」。
 - **退出**：按 `Esc`，或右鍵選單選「結束」。
 
@@ -96,7 +102,9 @@ python main.py
   免費、推測性質，需另裝 `resemblyzer`（選項旁有「說明」
   連結）。**擷取麥克風**：把你的聲音混進翻譯流，開會時
   自己說的話也會有字幕和逐字稿——建議戴耳機避免回音。
-  都不會多花 API 費用（計費看時長不看音量）。
+  都不會多花即時翻譯的 API 費用（計費看時長不看音量）。
+  暫停／繼續會留在同一場次，按「結束本次」才封存。AI 摘要優先使用
+  原文，沒有原文時才使用譯文，並另存 `*_summary.md`，不覆蓋舊摘要。
 - **視窗**：透明度（30%–100%）、視窗寬度（螢幕的 30%–100%），
   拖動即時預覽。
 - **介面語言**：English（預設）／中文，切換立即生效，
@@ -112,9 +120,12 @@ CI 不會取得 API key，也不會發出真實翻譯請求。
 本機執行相同檢查：
 
 ```powershell
-python -m compileall -q config.py languages.py main.py settings_ui.py strings.py subtitle_ui.py translator.py translator_openai.py tests
+python -m compileall -q config.py languages.py main.py settings_ui.py strings.py subtitle_ui.py summarizer.py transcript.py translator.py translator_openai.py tests
 python -m unittest discover -s tests -v
 ```
+
+所有摘要測試都使用本機假資料，不載入 `.env`、不使用 API key，
+也不會把逐字稿送給任何供應商。
 
 ## 常見問題
 
@@ -148,7 +159,9 @@ translator.py         Gemini Live session：音訊 queue 進、譯文 delta 出
 translator_openai.py  OpenAI gpt-realtime-translate（WebSocket、介面同上；
                       OpenCC 繁化層、echo 過濾、有上限的靜音尾巴）
 transcript.py         句子級 Markdown 逐字稿寫入器（時間戳、
-                      內容模式、講者標題）
+                      場次生命週期、內容模式、講者標題）
+summarizer.py          使用目前引擎、經使用者確認後才執行的結構化摘要；
+                      長逐字稿分段彙整、Markdown 安全另存
 diarizer.py           可選的本機講者辨識（resemblyzer 聲紋嵌入
                       ＋線上餘弦分群）
 subtitle_ui.py        tkinter 懸浮字幕視窗（置頂、可拖曳、預覽文字）

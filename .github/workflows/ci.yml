@@ -68,6 +68,8 @@ jobs:
           settings_ui.py
           strings.py
           subtitle_ui.py
+          summarizer.py
+          transcript.py
           translator.py
           translator_openai.py
           tests

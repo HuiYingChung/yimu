@@ -17,6 +17,12 @@ from languages import (coerce_target_language,
 PROVIDER = "gemini"
 MODEL_NAME = "gemini-3.5-live-translate-preview"
 OPENAI_MODEL_NAME = "gpt-realtime-translate"
+# On-demand transcript summaries. These are separate from the low-latency
+# translation models and are called only after explicit user confirmation.
+GEMINI_SUMMARY_MODEL = "gemini-3.6-flash"
+OPENAI_SUMMARY_MODEL = "gpt-5.6-terra"
+SUMMARY_CHUNK_CHARS = 80_000
+SUMMARY_MAX_OUTPUT_TOKENS = 2_000
 # Both providers detect the spoken source language automatically. This is the
 # requested output language and can be changed in the settings panel.
 TARGET_LANGUAGE_CODE = "zh-Hant"
