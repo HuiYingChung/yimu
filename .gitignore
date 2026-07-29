@@ -80,3 +80,4 @@ $RECYCLE.BIN/
 # Yimu user data
 settings.json
 transcripts/
+yimu_*.md
