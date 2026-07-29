@@ -20,8 +20,9 @@
 - 只顯示文字字幕，不播放翻譯語音；來源已是目標語言時字幕保持安靜
 - **會議友善**：可選的 Markdown 逐字稿（存到 Downloads）、
   本機講者標記、麥克風混音——自己說的話也能進逐字稿
-- **按需 AI 摘要**：結束已記錄的場次後，先確認哪些內容會離開本機，
-  再用目前選擇的 Gemini 或 OpenAI 產生結構化 Markdown 摘要
+- **按需 AI 摘要**：啟用「儲存逐字稿」後，結束已記錄的場次，先確認
+  哪些內容會離開本機，再用目前選擇的 Gemini 或 OpenAI 產生所選
+  目標語言的結構化 Markdown 摘要
 
 完整設計故事見
 [case study](https://www.huiyingchung.com/yimu-case-study.html)（英文）。
@@ -61,6 +62,23 @@ pip install resemblyzer
 按音訊時長計費，約 **$0.034/分鐘（≈ $2/小時）**——
 設定面板的引擎選項旁也標了這個價格，刻意的。
 
+### AI 摘要請求
+
+摘要會沿用目前引擎的 API key，但文字 token 費用與即時音訊翻譯分開：
+
+- Gemini 摘要使用
+  [`gemini-3.6-flash`](https://ai.google.dev/gemini-api/docs/models/gemini-3.6-flash)。
+  [官方定價](https://ai.google.dev/gemini-api/docs/pricing)的付費層為每
+  100 萬 token 輸入 $1.50、輸出 $7.50，也有免費層。Google 說明免費層
+  內容可能用於改善其產品，付費層內容則不會。
+- OpenAI 摘要使用
+  [`gpt-5.6-terra`](https://developers.openai.com/api/docs/models/gpt-5.6-terra)，
+  每 100 萬 token 輸入 $2.50、輸出 $15。Yimu 的每次摘要請求都設定
+  `store=False`。
+
+長逐字稿可能需要多次請求。傳送前，Yimu 會顯示供應商、字元數與預估
+請求次數，等你確認後才送出。
+
 ## 使用
 
 ```
@@ -75,10 +93,12 @@ python main.py
 - **拖曳**：按住視窗任意處移動。
 - **暫停／繼續**：使用字幕視窗右上角按鈕，或右鍵選單第一項。暫停會
   同時停止音訊擷取與即時翻譯連線，但不會把逐字稿切成不同場次。
-- **結束本次＋摘要**：按「結束本次」封存目前逐字稿。Yimu 會先顯示
-  供應商、字元數與預估請求次數；只有你確認後才會傳送逐字稿。
-  已完成的場次即使重開 Yimu，也能從右鍵選單的
-  「摘要上次逐字稿…」重試。
+- **結束本次＋摘要**：啟用「儲存逐字稿」時，按「結束本次」封存
+  目前逐字稿。Yimu 會先顯示供應商、字元數與預估請求次數；只有你
+  確認後才會傳送逐字稿。若未啟用儲存，「結束本次」只會直接停止，
+  不顯示對話框，也不產生摘要。已儲存的場次可從右鍵選單的
+  「摘要上次逐字稿…」重試；重開 Yimu 後，需先暫停即時翻譯才能使用
+  這個選項。摘要會使用目前的字幕目標語言，沒有獨立的摘要語言設定。
 - **設定**：右鍵選單選「設定…」。
 - **退出**：按 `Esc`，或右鍵選單選「結束」。
 
@@ -104,11 +124,12 @@ python main.py
   自己說的話也會有字幕和逐字稿——建議戴耳機避免回音。
   都不會多花即時翻譯的 API 費用（計費看時長不看音量）。
   暫停／繼續會留在同一場次，按「結束本次」才封存。AI 摘要優先使用
-  原文，沒有原文時才使用譯文，並另存 `*_summary.md`，不覆蓋舊摘要。
+  原文，沒有原文時才使用譯文，並另存 `*_summary.md`，不覆蓋舊摘要；
+  只有啟用「儲存逐字稿」時才能使用摘要。
 - **視窗**：透明度（30%–100%）、視窗寬度（螢幕的 30%–100%），
   拖動即時預覽。
 - **介面語言**：English（預設）／中文，切換立即生效，
-  與字幕目標語言分開設定。
+  與字幕目標語言分開設定；AI 摘要跟隨目標語言，不跟隨介面語言。
 
 其他進階預設值（逐字稿資料夾、重連時間等）在 `config.py`。
 
@@ -143,10 +164,13 @@ python -m unittest discover -s tests -v
 （`config.py` 的 `ECHO_TARGET_LANGUAGE = False`）。
 
 **模型名稱失效（連線一直失敗）？**
-兩個模型名以 2026 年中為準，未來可能更換。查
-[Gemini Live Translation 文件](https://ai.google.dev/gemini-api/docs/live-api/live-translate)
-或 OpenAI realtime translation 文件的最新名稱，
-改 `config.py` 的 `MODEL_NAME`／`OPENAI_MODEL_NAME`。
+四個模型名稱已於 2026 年 7 月確認，未來仍可能更換。查目前的
+[Gemini 即時翻譯](https://ai.google.dev/gemini-api/docs/live-api/live-translate)、
+[Gemini 摘要](https://ai.google.dev/gemini-api/docs/models/gemini-3.6-flash)、
+[OpenAI 即時翻譯](https://developers.openai.com/api/docs/guides/realtime-translation)
+或 [OpenAI 摘要](https://developers.openai.com/api/docs/models/gpt-5.6-terra)
+文件，再修改 `config.py` 的 `MODEL_NAME`、`OPENAI_MODEL_NAME`、
+`GEMINI_SUMMARY_MODEL` 或 `OPENAI_SUMMARY_MODEL`。
 
 ## 架構
 

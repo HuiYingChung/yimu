@@ -26,9 +26,10 @@ caption track is needed and no platform is off-limits.
 - **Meeting-ready**: optional Markdown transcripts (saved to
   Downloads), local speaker labels, and microphone mixing so your own
   voice makes it into the record
-- **On-demand AI summaries**: finish a recorded session, review exactly
-  what will leave the computer, then create a structured Markdown summary
-  with the selected Gemini or OpenAI engine
+- **On-demand AI summaries**: with **Save transcript** enabled, finish a
+  recorded session, review exactly what will leave the computer, then create
+  a structured Markdown summary in the selected target language with the
+  active Gemini or OpenAI engine
 
 The full design story is in the
 [case study](https://www.huiyingchung.com/yimu-case-study.html).
@@ -72,6 +73,26 @@ Billing is by audio duration — roughly **$0.034/minute (~$2/hour)**.
 The settings panel repeats this price next to the engine switch, on
 purpose.
 
+### AI summary requests
+
+Summaries reuse the API key for the active engine, but their text-token
+charges are separate from live audio translation:
+
+- Gemini summaries use
+  [`gemini-3.6-flash`](https://ai.google.dev/gemini-api/docs/models/gemini-3.6-flash).
+  The [published pricing](https://ai.google.dev/gemini-api/docs/pricing) is
+  $1.50 input / $7.50 output per 1 million tokens on the paid tier; a free
+  tier is also available. Google states that free-tier content may be used
+  to improve its products, while paid-tier content is not.
+- OpenAI summaries use
+  [`gpt-5.6-terra`](https://developers.openai.com/api/docs/models/gpt-5.6-terra)
+  at $2.50 input / $15 output per 1 million tokens. Yimu sets `store=False`
+  on every summary request.
+
+Long transcripts may require multiple requests. Before anything is sent,
+Yimu shows the provider, character count, and estimated request count and
+waits for confirmation.
+
 ## Run
 
 ```
@@ -90,11 +111,15 @@ desktop shortcut "譯幕 Yimu" points to it).
   or the first item in the right-click menu. Pausing stops both audio capture
   and the live translation connection without splitting the current
   transcript.
-- **Finish + summarize**: choose **Finish** to close the current transcript.
-  Yimu then shows the provider, character count, and estimated number of
-  requests. The transcript is sent only if you confirm. A saved session can
-  be retried later — including after restarting Yimu — from
-  **Summarize last session…** in the right-click menu.
+- **Finish + summarize**: when **Save transcript** is enabled, choose
+  **Finish** to close the current transcript. Yimu then shows the provider,
+  character count, and estimated number of requests; the transcript is sent
+  only if you confirm. If saving is disabled, **Finish** simply stops the
+  session without a dialog or summary. A saved session can be retried later
+  from **Summarize last session…** in the right-click menu. After restarting
+  Yimu, pause live translation first to enable that menu item. The summary
+  follows the current subtitle target language; there is no separate summary
+  language setting.
 - **Settings**: right-click → 設定….
 - **Quit**: press `Esc`, or right-click → 結束.
 
@@ -125,11 +150,13 @@ open); Cancel undoes the preview, Apply persists to `settings.json`
   cost: billing is by duration, not loudness. Pause/resume keeps writing to
   the same logical session; **Finish** closes it. AI summary uses the source
   transcript when available, otherwise the translation, and saves a sibling
-  `*_summary.md` file without overwriting earlier summaries.
+  `*_summary.md` file without overwriting earlier summaries. Summaries are
+  available only when **Save transcript** is enabled.
 - **Window** — opacity (30–100%) and window width (30–100% of the
   screen), both with live preview.
 - **Interface language** — English (default) / 中文, switches the UI
-  instantly. This is independent from the subtitle target language.
+  instantly. This is independent from the subtitle target language; AI
+  summaries follow the target language, not the interface language.
 
 Advanced defaults (transcript folder, reconnect timing, etc.) live in
 `config.py`.
@@ -168,10 +195,14 @@ Expected: the translator stays silent when the source is already
 Chinese (`ECHO_TARGET_LANGUAGE = False` in `config.py`).
 
 **Model name stopped working?**
-Both models are current as of mid-2026 and may be renamed. Check the
-[Gemini live-translation docs](https://ai.google.dev/gemini-api/docs/live-api/live-translate)
-or OpenAI's realtime translation docs, then update `MODEL_NAME` /
-`OPENAI_MODEL_NAME` in `config.py`.
+The four configured model names were verified in July 2026 and may change.
+Check the current
+[Gemini live-translation](https://ai.google.dev/gemini-api/docs/live-api/live-translate),
+[Gemini summary](https://ai.google.dev/gemini-api/docs/models/gemini-3.6-flash),
+[OpenAI realtime translation](https://developers.openai.com/api/docs/guides/realtime-translation),
+or [OpenAI summary](https://developers.openai.com/api/docs/models/gpt-5.6-terra)
+documentation, then update `MODEL_NAME`, `OPENAI_MODEL_NAME`,
+`GEMINI_SUMMARY_MODEL`, or `OPENAI_SUMMARY_MODEL` in `config.py`.
 
 ## Architecture
 
