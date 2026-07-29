@@ -1,18 +1,23 @@
 # 譯幕 Yimu — 即時語音翻譯字幕工具
 
+[![CI](https://github.com/HuiYingChung/yimu/actions/workflows/ci.yml/badge.svg)](https://github.com/HuiYingChung/yimu/actions/workflows/ci.yml)
+
 > English documentation: [README.md](README.md)
 
 即時擷取電腦正在播放的聲音（YouTube、線上會議、直播、Podcast），
-透過**語音原生翻譯**（音訊直接進翻譯模型）翻成**繁體中文**，
+透過**語音原生翻譯**（音訊直接進翻譯模型）翻成你選擇的**目標語言**
+（預設為繁體中文），
 以懸浮字幕視窗顯示在螢幕下方——不需要字幕軌、不綁平台。
 
 - **雙引擎**，app 內即時切換：Gemini Live（有免費額度）／
   OpenAI gpt-realtime-translate（計時收費）
+- 來源語言由模型自動偵測；目標語言可在設定中選擇。清單依引擎顯示
+  （Gemini 70+ 種、OpenAI 13 種）
 - 台灣在地化：OpenAI 只輸出簡體，程式用 OpenCC 自動轉成
   台灣用語繁體（人工智慧，不是人工智能）
 - 單人本機使用：無伺服器、無帳號，key 存本機 `.env`
 - 僅支援 **Windows**（音訊擷取用 WASAPI loopback）
-- 只顯示文字字幕，不播放翻譯語音；來源已是中文時字幕保持安靜
+- 只顯示文字字幕，不播放翻譯語音；來源已是目標語言時字幕保持安靜
 - **會議友善**：可選的 Markdown 逐字稿（存到 Downloads）、
   本機講者標記、麥克風混音——自己說的話也能進逐字稿
 
@@ -64,8 +69,10 @@ python main.py
 「譯幕 Yimu」捷徑指向它）。
 
 - 字幕視窗出現在螢幕下方置中，永遠置頂、半透明黑底白字。
-- 播放任何英文（或多數其他語言）的聲音，2～3 秒內出現中文字幕。
+- 播放任何支援的來源語言，2～3 秒內出現所選目標語言的字幕。
 - **拖曳**：按住視窗任意處移動。
+- **暫停／繼續**：使用字幕視窗右上角按鈕，或右鍵選單第一項。暫停會
+  同時停止音訊擷取與即時翻譯連線。
 - **設定**：右鍵選單選「設定…」。
 - **退出**：按 `Esc`，或右鍵選單選「結束」。
 
@@ -77,8 +84,9 @@ python main.py
 
 - **翻譯引擎**：Gemini（預設，免費）／ OpenAI（計費，
   需要 `.env` 有 `OPENAI_API_KEY`）。切換會自動重連，不用重開程式。
-- **譯文**：字級（10–32pt）、顯示行數（1–10 行，
-  視窗高度自動跟著調整）。
+- **譯文**：來源語言自動偵測；目標語言清單會依目前引擎更新，
+  切換後翻譯工作階段會自動重連。另可調整字級（10–32pt）、
+  顯示行數（1–10 行，視窗高度自動跟著調整）。
 - **原文**：在字幕上方顯示原語言辨識文字，可獨立調
   原文字級與行數（開關沒勾時子選項反灰）。
 - **記錄**：把逐字稿存成帶時間戳的 Markdown 檔（在 Downloads
@@ -91,10 +99,22 @@ python main.py
   都不會多花 API 費用（計費看時長不看音量）。
 - **視窗**：透明度（30%–100%）、視窗寬度（螢幕的 30%–100%），
   拖動即時預覽。
-- **介面語言**：English（預設）／中文，切換立即生效。
-  字幕輸出一律是繁體中文。
+- **介面語言**：English（預設）／中文，切換立即生效，
+  與字幕目標語言分開設定。
 
-其他進階預設值（目標語言、逐字稿資料夾等）在 `config.py`。
+其他進階預設值（逐字稿資料夾、重連時間等）在 `config.py`。
+
+## 開發檢查
+
+每次 push 與 Pull Request 都會在 Windows、Python 3.11 上執行離線測試。
+CI 不會取得 API key，也不會發出真實翻譯請求。
+
+本機執行相同檢查：
+
+```powershell
+python -m compileall -q config.py languages.py main.py settings_ui.py strings.py subtitle_ui.py translator.py translator_openai.py tests
+python -m unittest discover -s tests -v
+```
 
 ## 常見問題
 

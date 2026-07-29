@@ -26,14 +26,17 @@ class SubtitleWindow:
     right-click menu opens settings (when wired) and quits; Esc quits.
     """
 
-    def __init__(self, root: tk.Tk, on_close=None, on_open_settings=None):
+    def __init__(self, root: tk.Tk, on_close=None, on_open_settings=None,
+                 on_toggle_translation=None):
         self._root = root
         self._on_close = on_close
+        self._on_toggle_translation = on_toggle_translation
         self._text_queue: queue.Queue = queue.Queue()
         self._lines: deque[str] = deque(maxlen=config.MAX_LINES)
         self._current = ""
         self._last_text_time = 0.0
         self._drag_offset = (0, 0)
+        self._runtime_state = "stopped"
 
         root.overrideredirect(True)
         root.attributes("-topmost", True)
@@ -43,11 +46,38 @@ class SubtitleWindow:
         screen_w = root.winfo_screenwidth()
         self._width = int(screen_w * config.WINDOW_WIDTH_RATIO)
 
-        self._status_label = tk.Label(
-            root, text="", font=(config.FONT_FAMILY, 10),
-            fg="#999999", bg="black", anchor="w",
+        self._status_bar = tk.Frame(root, bg="black")
+        self._status_bar.pack(fill="x", padx=10, pady=(3, 0))
+        self._status_dot = tk.Label(
+            self._status_bar, text="●", font=(config.FONT_FAMILY, 9),
+            fg="#888888", bg="black",
         )
-        self._status_label.pack(fill="x", padx=12, pady=(4, 0))
+        self._status_dot.pack(side="left")
+        self._status_label = tk.Label(
+            self._status_bar, text=t("stopped"),
+            font=(config.FONT_FAMILY, 10),
+            fg="#aaaaaa", bg="black", anchor="w",
+        )
+        self._status_label.pack(side="left", fill="x", expand=True, padx=(4, 8))
+        self._toggle_button = None
+        if on_toggle_translation is not None:
+            self._toggle_button = tk.Button(
+                self._status_bar,
+                text=t("action_start"),
+                command=on_toggle_translation,
+                font=(config.FONT_FAMILY, 9),
+                fg="#eeeeee",
+                bg="#333333",
+                activeforeground="white",
+                activebackground="#4a4a4a",
+                relief="flat",
+                bd=0,
+                padx=8,
+                pady=1,
+                cursor="hand2",
+                takefocus=False,
+            )
+            self._toggle_button.pack(side="right")
 
         self._source_current = ""
         # Font object (not a tuple) so _trim_source can measure pixel widths
@@ -75,6 +105,12 @@ class SubtitleWindow:
         root.bind("<Configure>", lambda e: self._reposition())
 
         self._menu = tk.Menu(root, tearoff=0)
+        self._menu_toggle_index = None
+        if on_toggle_translation is not None:
+            self._menu.add_command(label=t("action_start"),
+                                   command=on_toggle_translation)
+            self._menu_toggle_index = self._menu.index("end")
+            self._menu.add_separator()
         self._menu_has_settings = on_open_settings is not None
         if self._menu_has_settings:
             self._menu.add_command(label=t("menu_settings"),
@@ -98,6 +134,10 @@ class SubtitleWindow:
 
     def push_status(self, message: str) -> None:
         self._text_queue.put(("status", message))
+
+    def push_runtime_state(self, state: str, message: str) -> None:
+        """Update control state and status text from any thread."""
+        self._text_queue.put(("runtime", (state, message)))
 
     # --- main-thread machinery ---
 
@@ -123,6 +163,9 @@ class SubtitleWindow:
                 self._source_label.config(text=self._source_current)
             elif kind == "status":
                 self._status_label.config(text=payload)
+            elif kind == "runtime":
+                state, message = payload
+                self._apply_runtime_state(state, message)
         # pause timeout: commit the current line so old text stops growing
         if (self._current
                 and time.monotonic() - self._last_text_time
@@ -163,11 +206,16 @@ class SubtitleWindow:
 
     def apply_settings(self) -> None:
         """Re-apply user-adjustable config values to the live window."""
+        self._refresh_controls()
+        settings_index = 2 if self._menu_toggle_index is not None else 0
         if self._menu_has_settings:
-            self._menu.entryconfigure(0, label=t("menu_settings"))
-            self._menu.entryconfigure(1, label=t("menu_quit"))
+            self._menu.entryconfigure(
+                settings_index, label=t("menu_settings"))
+            self._menu.entryconfigure(
+                settings_index + 1, label=t("menu_quit"))
         else:
-            self._menu.entryconfigure(0, label=t("menu_quit"))
+            self._menu.entryconfigure(
+                settings_index, label=t("menu_quit"))
         if self._lines.maxlen != config.MAX_LINES:
             # deque capacity is fixed at construction; rebuild, keeping
             # the most recent lines
@@ -190,6 +238,28 @@ class SubtitleWindow:
         else:
             self._source_label.pack_forget()
         self._render()  # height may have changed; _render repositions
+
+    def _apply_runtime_state(self, state: str, message: str) -> None:
+        self._runtime_state = state
+        self._status_label.config(text=message)
+        self._refresh_controls()
+
+    def _refresh_controls(self) -> None:
+        styles = {
+            "starting": ("#e7b94f", "action_pause"),
+            "running": ("#55c878", "action_pause"),
+            "paused": ("#e7b94f", "action_resume"),
+            "error": ("#ef6a6a", "action_retry"),
+            "stopped": ("#888888", "action_start"),
+        }
+        color, action_key = styles.get(
+            self._runtime_state, styles["stopped"])
+        self._status_dot.config(fg=color)
+        if self._toggle_button is not None:
+            self._toggle_button.config(text=t(action_key))
+        if self._menu_toggle_index is not None:
+            self._menu.entryconfigure(
+                self._menu_toggle_index, label=t(action_key))
 
     def set_preview(self, on: bool) -> None:
         """Placeholder text while the settings dialog is open.

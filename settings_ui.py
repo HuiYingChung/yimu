@@ -17,6 +17,8 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 import config
+from languages import (coerce_target_language, language_label, language_name,
+                       target_language_codes)
 from strings import t
 
 
@@ -44,6 +46,9 @@ class SettingsDialog:
         self._speaker_labels = tk.BooleanVar(value=config.SPEAKER_LABELS)
         self._capture_mic = tk.BooleanVar(value=config.CAPTURE_MICROPHONE)
         self._language = tk.StringVar(value=config.UI_LANGUAGE)
+        self._target_language = tk.StringVar()
+        self._target_code = config.TARGET_LANGUAGE_CODE
+        self._target_by_label: dict[str, str] = {}
 
         # options that preview live; snapshot originals for Cancel
         self._orig = {
@@ -86,16 +91,31 @@ class SettingsDialog:
                                  padding=8), "section_subtitle")
         sub.grid(row=1, column=0, sticky="ew", pady=(10, 0))
         sub.columnconfigure(0, weight=1)
+        sub.columnconfigure(1, weight=1)
+        reg(ttk.Label(sub, text=t("source_language")),
+            "source_language").grid(row=0, column=0, sticky="w")
+        reg(ttk.Label(sub, text=t("source_auto")),
+            "source_auto").grid(row=0, column=1, sticky="e")
+        reg(ttk.Label(sub, text=t("target_language")),
+            "target_language").grid(row=1, column=0, sticky="w", pady=(6, 0))
+        self._target_combo = ttk.Combobox(
+            sub, textvariable=self._target_language, state="readonly",
+            width=32, height=12,
+        )
+        self._target_combo.grid(
+            row=1, column=1, sticky="e", pady=(6, 0))
+        ttk.Separator(sub, orient="horizontal").grid(
+            row=2, column=0, columnspan=2, sticky="ew", pady=(9, 3))
         reg(ttk.Label(sub, text=t("font_size")),
-            "font_size").grid(row=0, column=0, sticky="w")
+            "font_size").grid(row=3, column=0, sticky="w")
         ttk.Spinbox(
             sub, from_=10, to=32, textvariable=self._font_size, width=5,
-        ).grid(row=0, column=1, sticky="e")
+        ).grid(row=3, column=1, sticky="e")
         reg(ttk.Label(sub, text=t("lines")),
-            "lines").grid(row=1, column=0, sticky="w", pady=(6, 0))
+            "lines").grid(row=4, column=0, sticky="w", pady=(6, 0))
         ttk.Spinbox(
             sub, from_=1, to=10, textvariable=self._max_lines, width=5,
-        ).grid(row=1, column=1, sticky="e", pady=(6, 0))
+        ).grid(row=4, column=1, sticky="e", pady=(6, 0))
 
         # --- source text ---
         src = reg(ttk.LabelFrame(frame, text=t("section_source"),
@@ -233,10 +253,13 @@ class SettingsDialog:
             var.trace_add("write", lambda *_: self._schedule_preview())
         self._language.trace_add(
             "write", lambda *_: self._on_language_change())
+        self._provider.trace_add(
+            "write", lambda *_: self._on_provider_change())
         self._save_transcript.trace_add(
             "write", lambda *_: self._update_dependents())
         self._show_source.trace_add(
             "write", lambda *_: self._update_dependents())
+        self._refresh_target_options(config.TARGET_LANGUAGE_CODE)
         self._update_dependents()
         window.set_preview(True)  # placeholder text while dialog is open
 
@@ -269,12 +292,41 @@ class SettingsDialog:
         self._pull_appearance()
         self._window.apply_settings()
 
+    def _selected_target_code(self) -> str:
+        return self._target_by_label.get(
+            self._target_language.get(), self._target_code)
+
+    def _refresh_target_options(self, preferred_code: str | None = None) -> None:
+        """Rebuild the target list for the selected provider/UI language."""
+        if preferred_code is None:
+            preferred_code = self._selected_target_code()
+        provider = self._provider.get()
+        code = coerce_target_language(provider, preferred_code)
+        labels = [
+            language_label(item, self._language.get())
+            for item in target_language_codes(provider)
+        ]
+        self._target_by_label = {
+            language_label(item, self._language.get()): item
+            for item in target_language_codes(provider)
+        }
+        self._target_combo.configure(values=labels)
+        self._target_code = code
+        self._target_language.set(
+            language_label(code, self._language.get()))
+
+    def _on_provider_change(self) -> None:
+        """Keep the current target when the new provider supports it."""
+        self._refresh_target_options()
+
     def _on_language_change(self) -> None:
         """Relabel the dialog and the subtitle window immediately."""
+        target_code = self._selected_target_code()
         config.UI_LANGUAGE = self._language.get()
         self._top.title(t("settings_title"))
         for widget, key in self._i18n:
             widget.config(text=t(key))
+        self._refresh_target_options(target_code)
         self._window.apply_settings()
 
     def _pull_appearance(self) -> None:
@@ -308,12 +360,17 @@ class SettingsDialog:
         return max(lo, min(hi, value))
 
     def _apply(self) -> None:
-        provider_changed = self._provider.get() != config.PROVIDER
+        provider = self._provider.get()
+        target_code = coerce_target_language(
+            provider, self._selected_target_code())
+        provider_changed = provider != config.PROVIDER
+        language_changed = target_code != config.TARGET_LANGUAGE_CODE
         pipeline_changed = (
             bool(self._save_transcript.get()) != config.SAVE_TRANSCRIPT
             or bool(self._speaker_labels.get()) != config.SPEAKER_LABELS
             or bool(self._capture_mic.get()) != config.CAPTURE_MICROPHONE)
-        config.PROVIDER = self._provider.get()
+        config.PROVIDER = provider
+        config.TARGET_LANGUAGE_CODE = target_code
         config.UI_LANGUAGE = self._language.get()
         self._pull_appearance()
         config.SAVE_TRANSCRIPT = bool(self._save_transcript.get())
@@ -327,14 +384,20 @@ class SettingsDialog:
         self._window.apply_settings()
         self._top.destroy()
         # capture/recording options are wired at pipeline start, so both
-        # provider switches and those toggles need a backend restart
-        if (provider_changed or pipeline_changed) \
+        # Provider, target-language, capture and recording changes are wired
+        # at pipeline start and therefore need a backend restart.
+        if (provider_changed or language_changed or pipeline_changed) \
                 and self._backend is not None:
             if provider_changed:
-                self._window.push_status(
-                    t("switching_engine", provider=config.PROVIDER))
+                restart_message = t(
+                    "switching_engine", provider=config.PROVIDER)
+            elif language_changed:
+                restart_message = t(
+                    "switching_language",
+                    language=language_name(
+                        config.TARGET_LANGUAGE_CODE, config.UI_LANGUAGE))
             elif config.SAVE_TRANSCRIPT:
-                self._window.push_status(t("transcript_on"))
+                restart_message = t("transcript_on")
             else:
-                self._window.push_status(t("reconnecting"))
-            self._backend.restart()
+                restart_message = t("reconnecting")
+            self._backend.restart(restart_message)

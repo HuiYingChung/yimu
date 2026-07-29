@@ -15,6 +15,14 @@ _STRINGS = {
                          "zh": "設定…"},
     "menu_quit":        {"en": "Quit",
                          "zh": "結束"},
+    "action_start":     {"en": "Start",
+                         "zh": "開始"},
+    "action_pause":     {"en": "Pause",
+                         "zh": "暫停"},
+    "action_resume":    {"en": "Resume",
+                         "zh": "繼續"},
+    "action_retry":     {"en": "Retry",
+                         "zh": "重試"},
 
     # settings panel
     "settings_title":   {"en": "Yimu Settings",
@@ -27,6 +35,12 @@ _STRINGS = {
                          "zh": "OpenAI（付費，約 $2/小時）"},
     "section_subtitle": {"en": "Translation",
                          "zh": "譯文"},
+    "source_language":  {"en": "Spoken language",
+                         "zh": "來源語言"},
+    "source_auto":      {"en": "Auto-detect",
+                         "zh": "自動偵測"},
+    "target_language":  {"en": "Translate to",
+                         "zh": "翻譯成"},
     "section_window":   {"en": "Window",
                          "zh": "視窗"},
     "section_source":   {"en": "Source text",
@@ -94,6 +108,9 @@ _STRINGS = {
                          "zh": "套用"},
     "switching_engine": {"en": "Switching to {provider}, reconnecting…",
                          "zh": "切換引擎：{provider}，重新連線中…"},
+    "switching_language": {
+        "en": "Switching translation to {language}, reconnecting…",
+        "zh": "切換目標語言為{language}，重新連線中…"},
 
     # settings live-preview placeholders
     "preview_line":     {"en": "Subtitle preview text 字幕預覽",
@@ -102,10 +119,18 @@ _STRINGS = {
                          "zh": "原文預覽 source text preview"},
 
     # status line
+    "starting_translation": {
+        "en": "starting audio capture and translation…",
+        "zh": "正在啟動音訊擷取與翻譯…"},
+    "stopped":          {"en": "translation stopped",
+                         "zh": "翻譯已停止"},
+    "paused":           {
+        "en": "paused — audio capture and translation are off",
+        "zh": "已暫停——音訊擷取與翻譯均已停止"},
     "listening":        {"en": "listening…",
                          "zh": "聆聽中…"},
-    "connected":        {"en": "connected",
-                         "zh": "已連線"},
+    "connected":        {"en": "connected — listening",
+                         "zh": "已連線・聆聽中"},
     "reconnecting":     {"en": "session ended, reconnecting…",
                          "zh": "session 結束，重新連線中…"},
     "rate_limited":     {"en": "rate limited (429), retrying in {delay}s…",
@@ -129,9 +154,12 @@ _STRINGS = {
     "err_capture":      {"en": "audio capture failed: {detail}",
                          "zh": "音訊擷取失敗：{detail}"},
     "err_diarizer":     {"en": "speaker labels off — run: "
-                               "pip install resemblyzer",
+                                "pip install resemblyzer",
                          "zh": "講者標記未啟用——請先執行 "
                                "pip install resemblyzer"},
+    "err_stop_timeout": {
+        "en": "Could not pause cleanly. Translation may still be running.",
+        "zh": "無法正常暫停，翻譯可能仍在執行。"},
     "err_bad_provider": {"en": "Invalid PROVIDER value: {value}.\n"
                                "Valid options: {options}",
                          "zh": "設定裡的 PROVIDER 值不合法:{value}。\n"

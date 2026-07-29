@@ -19,6 +19,7 @@ from google import genai
 from google.genai import types
 
 import config
+from languages import is_chinese
 from strings import t
 
 # Errors that retrying will not fix — stop instead of reconnect-looping.
@@ -62,7 +63,7 @@ def _leaf_errors(exc: BaseException) -> list[BaseException]:
 class Translator:
     """Streams audio chunks to Gemini Live, emits translation deltas.
 
-    on_text(str):        incremental zh-Hant translation text (delta)
+    on_text(str):        incremental target-language text (delta)
     on_source_text(str): incremental source-language transcription (optional)
     on_status(str):      human-readable connection status for the UI
     """
@@ -179,6 +180,8 @@ class Translator:
         ASCII delta (e.g. the acronym "AI" inside a translation) must
         never be suppressed just because the English source said it too.
         """
+        if not is_chinese(config.TARGET_LANGUAGE_CODE):
+            return False
         if not _CJK_RE.search(delta):
             return False
         norm = _normalize(delta)

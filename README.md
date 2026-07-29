@@ -1,22 +1,28 @@
 # Yimu 譯幕 — Live Translated Subtitles for Your Desktop
 
+[![CI](https://github.com/HuiYingChung/yimu/actions/workflows/ci.yml/badge.svg)](https://github.com/HuiYingChung/yimu/actions/workflows/ci.yml)
+
 > 繁體中文文件：[README.zh-TW.md](README.zh-TW.md)
 
 **Yimu** captures whatever your Windows machine is playing — YouTube,
-online meetings, livestreams, podcasts — and shows live **Traditional
-Chinese** subtitles in a floating window. Translation is speech-native
+online meetings, livestreams, podcasts — and shows live subtitles in the
+**target language you choose** (Traditional Chinese by default) in a floating
+window. Translation is speech-native
 (the audio stream goes straight into a translation model), so no
 caption track is needed and no platform is off-limits.
 
 - Dual engines, switchable in-app: **Gemini Live** (free tier) or
   **OpenAI gpt-realtime-translate** (metered)
+- Source speech is detected automatically; choose the target language in
+  Settings. The available list follows the selected engine (70+ targets on
+  Gemini, 13 on OpenAI).
 - Localized for Taiwan: OpenAI's Simplified-only output is converted
   client-side with OpenCC (Taiwan phrasing — 人工智慧, not 人工智能)
 - Single-user, local-first: no server, no account, keys stay in a
   local `.env`
 - Windows only (audio capture uses WASAPI loopback)
 - Subtitles only — the translated audio is discarded, and the window
-  stays quiet when the source is already Chinese
+  stays quiet when the source is already in the selected target language
 - **Meeting-ready**: optional Markdown transcripts (saved to
   Downloads), local speaker labels, and microphone mixing so your own
   voice makes it into the record
@@ -74,9 +80,12 @@ desktop shortcut "譯幕 Yimu" points to it).
 
 - The subtitle window appears bottom-center: always on top,
   semi-transparent, black bar with white text.
-- Play anything in English (or most other languages) — Chinese
-  subtitles appear within 2–3 seconds.
+- Play speech in any supported source language — subtitles in your selected
+  target language appear within 2–3 seconds.
 - **Drag** anywhere on the window to move it.
+- **Pause / resume**: use the button at the top-right of the subtitle window,
+  or the first item in the right-click menu. Pausing stops both audio capture
+  and the live translation connection.
 - **Settings**: right-click → 設定….
 - **Quit**: press `Esc`, or right-click → 結束.
 
@@ -89,8 +98,10 @@ open); Cancel undoes the preview, Apply persists to `settings.json`
 
 - **Engine** — Gemini (default, free) / OpenAI (metered; needs
   `OPENAI_API_KEY`). Switching reconnects in place, no restart.
-- **Translation** — font size (10–32 pt) and lines shown (1–10; the
-  window height follows automatically).
+- **Translation** — source speech is auto-detected; choose a target language
+  supported by the active engine. Changing it reconnects automatically.
+  Font size (10–32 pt) and lines shown (1–10; the window height follows
+  automatically) remain adjustable.
 - **Source text** — show the source-language transcription above the
   translation, with its own font size and line count (greyed out
   while the toggle is off).
@@ -106,10 +117,23 @@ open); Cancel undoes the preview, Apply persists to `settings.json`
 - **Window** — opacity (30–100%) and window width (30–100% of the
   screen), both with live preview.
 - **Interface language** — English (default) / 中文, switches the UI
-  instantly. Subtitle output is always Traditional Chinese.
+  instantly. This is independent from the subtitle target language.
 
-Advanced defaults (target language, transcript folder, etc.) live in
+Advanced defaults (transcript folder, reconnect timing, etc.) live in
 `config.py`.
+
+## Development checks
+
+Every push and pull request runs the offline test suite on Windows with
+Python 3.11. CI does not receive API keys and does not make live translation
+requests.
+
+Run the same checks locally:
+
+```powershell
+python -m compileall -q config.py languages.py main.py settings_ui.py strings.py subtitle_ui.py translator.py translator_openai.py tests
+python -m unittest discover -s tests -v
+```
 
 ## FAQ
 

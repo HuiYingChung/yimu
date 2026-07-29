@@ -9,12 +9,16 @@ import json
 import os
 import sys
 
+from languages import (coerce_target_language,
+                       is_known_target_language)
+
 # --- Translation ---
-# "gemini" or "openai" — switchable in the settings panel; the OpenAI
-# track is a placeholder, not implemented
+# "gemini" or "openai" — switchable in the settings panel.
 PROVIDER = "gemini"
 MODEL_NAME = "gemini-3.5-live-translate-preview"
 OPENAI_MODEL_NAME = "gpt-realtime-translate"
+# Both providers detect the spoken source language automatically. This is the
+# requested output language and can be changed in the settings panel.
 TARGET_LANGUAGE_CODE = "zh-Hant"
 # Stay silent when the source audio is already in the target language.
 ECHO_TARGET_LANGUAGE = False
@@ -65,6 +69,7 @@ _SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "settings.json")
 # name -> validator; invalid or missing values keep the default above
 _USER_SETTINGS = {
     "PROVIDER": lambda v: v in ("gemini", "openai"),
+    "TARGET_LANGUAGE_CODE": is_known_target_language,
     "UI_LANGUAGE": lambda v: v in ("en", "zh-TW"),
     "FONT_SIZE": lambda v: isinstance(v, int) and 10 <= v <= 32,
     "SOURCE_FONT_SIZE": lambda v: (isinstance(v, int)
@@ -103,6 +108,10 @@ def load_user_settings() -> None:
     for name, valid in _USER_SETTINGS.items():
         if name in data and valid(data[name]):
             globals()[name] = data[name]
+    # A saved target can be valid for one engine but not the other. Never
+    # start a provider with a target it cannot honor.
+    globals()["TARGET_LANGUAGE_CODE"] = coerce_target_language(
+        PROVIDER, TARGET_LANGUAGE_CODE)
 
 
 def save_user_settings() -> None:

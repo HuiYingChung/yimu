@@ -20,11 +20,12 @@ import websockets
 from opencc import OpenCC
 
 import config
+from languages import is_traditional_chinese
 from strings import t
 from translator import FatalTranslatorError, _CJK_RE, _leaf_errors, _normalize
 
-# The endpoint only outputs generic 'zh' (Simplified); convert client-side
-# to Traditional with Taiwan phrasing so subtitles match the Gemini engine.
+# For the zh-Hant target, the endpoint only accepts generic "zh"; convert its
+# output client-side to Traditional with Taiwan phrasing.
 _to_traditional = OpenCC("s2twp").convert
 
 # The endpoint finalizes an utterance only after hearing trailing silence
@@ -46,6 +47,13 @@ def _openai_language(code: str) -> str:
     'zh-Hant' is rejected, 'zh' is the only Chinese option).
     """
     return code.split("-")[0].lower()
+
+
+def _display_text(text: str, target_code: str | None = None) -> str:
+    """Apply Yimu's local output formatting only where it is valid."""
+    code = target_code or config.TARGET_LANGUAGE_CODE
+    return _to_traditional(text) if is_traditional_chinese(code) else text
+
 
 # Errors that retrying will not fix — stop instead of reconnect-looping.
 _FATAL_MARKERS = (
@@ -177,17 +185,19 @@ class Translator:
             if kind == "session.input_transcript.delta":
                 delta = event.get("delta", "")
                 if delta:
-                    # keep both scripts so echo matching works either way
+                    # For the Taiwan-Chinese target keep both scripts so echo
+                    # matching works whether the service emits Simplified or
+                    # Traditional source text.
                     self._recent_input = (
                         self._recent_input + _normalize(delta)
-                        + _normalize(_to_traditional(delta))
+                        + _normalize(_display_text(delta))
                     )[-600:]
                     if self._on_source_text:
                         self._on_source_text(delta)
             elif kind == "session.output_transcript.delta":
                 delta = event.get("delta", "")
                 if delta and not self._is_echo(delta):
-                    self._on_text(_to_traditional(delta))
+                    self._on_text(_display_text(delta))
             elif kind == "error":
                 raise ConnectionError(
                     f"server error: {json.dumps(event.get('error', event), ensure_ascii=False)[:200]}"
@@ -204,13 +214,15 @@ class Translator:
         scripts because the echo may come back Simplified while the
         source transcript is Traditional (or vice versa).
         """
+        if not is_traditional_chinese(config.TARGET_LANGUAGE_CODE):
+            return False
         if not _CJK_RE.search(delta):
             return False  # pure-ASCII deltas can't be echoes of zh input
         norm = _normalize(delta)
         if not norm:
             return False
         return (norm in self._recent_input
-                or _normalize(_to_traditional(delta)) in self._recent_input)
+                or _normalize(_display_text(delta)) in self._recent_input)
 
 
 async def _standalone() -> None:

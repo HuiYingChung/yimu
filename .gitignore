@@ -1,28 +1,82 @@
-# Environment
+# Credentials and local environment
 .env
 .env.*
 !.env.example
+.envrc
+.direnv/
+.pypirc
 
-# Python
+# Python bytecode and caches
 __pycache__/
-*.py[cod]
+*.py[codz]
+*$py.class
+
+# Virtual environments
 .venv/
 venv/
+env/
+ENV/
+__pypackages__/
 
-# Test artifacts
+# Build and packaging output
+build/
+dist/
+.eggs/
+*.egg-info/
+wheels/
+*.manifest
+# Keep PyInstaller *.spec files tracked once packaging is added.
+
+# Test, coverage, lint and type-checking output
+.pytest_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.mypy_cache/
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Runtime and test artifacts
 *.wav
 *.log
+logs/
 
 # Design doc kept locally, not versioned
 realtime-subtitle-translator-plan.md.pdf
 
-# OS
+# Editors
+.idea/
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+*.swp
+*~
+
+# Windows and OS metadata
 Thumbs.db
-desktop.ini
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.stackdump
+*.lnk
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
 .DS_Store
 
-# User settings written by the in-app settings panel
+# Yimu user data
 settings.json
-
-# Saved transcripts (personal content, can grow large)
 transcripts/
