@@ -21,7 +21,7 @@ import config
 from audio_capture import AudioCapture
 from strings import t
 from subtitle_ui import SubtitleWindow
-from translator import FatalTranslatorError
+from translator_common import FatalTranslatorError
 
 # provider -> (translator module name, required .env key)
 _PROVIDERS = {

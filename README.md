@@ -170,7 +170,7 @@ requests.
 Run the same checks locally:
 
 ```powershell
-python -m compileall -q config.py languages.py main.py settings_ui.py strings.py subtitle_ui.py summarizer.py transcript.py translator.py translator_openai.py tests
+python -m compileall -q config.py languages.py main.py settings_ui.py strings.py subtitle_ui.py summarizer.py transcript.py translator.py translator_common.py translator_openai.py tests
 python -m unittest discover -s tests -v
 ```
 
@@ -212,6 +212,7 @@ audio_capture.py      WASAPI loopback → mono PCM chunks at the engine's
                       optional mic mixing (mic-clocked, so silent loopback
                       can't stall the stream)
 translator.py         Gemini Live session — audio queue in, text deltas out
+translator_common.py  provider-neutral errors and echo-comparison helpers
 translator_openai.py  OpenAI gpt-realtime-translate over WebSocket
                       (same contract; OpenCC Traditional-Chinese layer,
                       echo filter, capped silence tail)

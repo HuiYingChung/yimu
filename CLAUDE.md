@@ -53,7 +53,8 @@
   送 API 前必須轉 16kHz 單聲道 int16 PCM。
 - 翻譯引擎介面固定為「queue 進、text callback 出」——每個引擎
   一個模組（translator.py＝Gemini、translator_openai.py＝OpenAI），
-  main.py 依 PROVIDER 載入，取樣率讀引擎的 SAMPLE_RATE class attr
+  共用錯誤與 echo 比對工具放 translator_common.py；main.py 依 PROVIDER
+  載入，取樣率讀引擎的 SAMPLE_RATE class attr
   （Gemini 16k、OpenAI 24k，送錯會變速變調）。
 - OpenAI 端點只收兩碼語言代碼（zh-Hant 會被拒，只有 zh＝簡體），
   繁化靠 OpenCC s2twp；echo 過濾要繁簡雙向比對。

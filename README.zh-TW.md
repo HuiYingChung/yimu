@@ -141,7 +141,7 @@ CI 不會取得 API key，也不會發出真實翻譯請求。
 本機執行相同檢查：
 
 ```powershell
-python -m compileall -q config.py languages.py main.py settings_ui.py strings.py subtitle_ui.py summarizer.py transcript.py translator.py translator_openai.py tests
+python -m compileall -q config.py languages.py main.py settings_ui.py strings.py subtitle_ui.py summarizer.py transcript.py translator.py translator_common.py translator_openai.py tests
 python -m unittest discover -s tests -v
 ```
 
@@ -180,6 +180,7 @@ audio_capture.py      WASAPI loopback → 依引擎取樣率的單聲道 PCM chu
                       可選麥克風混音（以麥克風流當時鐘，loopback
                       靜音也不會卡住）
 translator.py         Gemini Live session：音訊 queue 進、譯文 delta 出
+translator_common.py  兩個供應商共用的錯誤類別與 echo 比對工具
 translator_openai.py  OpenAI gpt-realtime-translate（WebSocket、介面同上；
                       OpenCC 繁化層、echo 過濾、有上限的靜音尾巴）
 transcript.py         句子級 Markdown 逐字稿寫入器（時間戳、

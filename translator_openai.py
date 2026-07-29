@@ -22,7 +22,12 @@ from opencc import OpenCC
 import config
 from languages import is_traditional_chinese
 from strings import t
-from translator import FatalTranslatorError, _CJK_RE, _leaf_errors, _normalize
+from translator_common import (
+    FatalTranslatorError,
+    _CJK_RE,
+    _leaf_errors,
+    _normalize,
+)
 
 # For the zh-Hant target, the endpoint only accepts generic "zh"; convert its
 # output client-side to Traditional with Taiwan phrasing.

@@ -11,7 +11,6 @@ to the terminal)
 """
 
 import asyncio
-import re
 import sys
 import traceback
 
@@ -21,6 +20,12 @@ from google.genai import types
 import config
 from languages import is_chinese
 from strings import t
+from translator_common import (
+    FatalTranslatorError,
+    _CJK_RE,
+    _leaf_errors,
+    _normalize,
+)
 
 # Errors that retrying will not fix — stop instead of reconnect-looping.
 _FATAL_MARKERS = (
@@ -29,35 +34,6 @@ _FATAL_MARKERS = (
     "PERMISSION_DENIED",
     "UNAUTHENTICATED",
 )
-
-
-class FatalTranslatorError(RuntimeError):
-    """Unrecoverable error (bad API key, no permission)."""
-
-
-# Keep only letters, digits and CJK so half/full-width punctuation and
-# spacing differences don't break echo comparison.
-_NORM_RE = re.compile(r"[^0-9a-z一-鿿]+")
-_CJK_RE = re.compile(r"[一-鿿]")
-
-
-def _normalize(text: str) -> str:
-    return _NORM_RE.sub("", text.lower())
-
-
-def _leaf_errors(exc: BaseException) -> list[BaseException]:
-    """Flatten nested ExceptionGroups into their leaf exceptions.
-
-    TaskGroup wraps child failures in an ExceptionGroup, so neither
-    `except FatalTranslatorError` nor substring checks on str(exc) see
-    the real error without unwrapping first.
-    """
-    if isinstance(exc, BaseExceptionGroup):
-        leaves: list[BaseException] = []
-        for sub in exc.exceptions:
-            leaves.extend(_leaf_errors(sub))
-        return leaves
-    return [exc]
 
 
 class Translator:

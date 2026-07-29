@@ -71,6 +71,7 @@ jobs:
           summarizer.py
           transcript.py
           translator.py
+          translator_common.py
           translator_openai.py
           tests
 
